@@ -29,7 +29,7 @@ void main() {
   // 1. Materialization Effect (0.0 to 1.0 transition)
   float matScanY = mix(-1.0, 2.0, uMaterialize);
   float distToScan = pos.y - matScanY;
-  
+
   if (uMaterialize < 1.0) {
     // Dispersion above the scanline
     float disperse = smoothstep(0.0, 0.6, distToScan);
@@ -66,12 +66,12 @@ void main() {
       if (aFeature == 1.0 || (pos.y >= 0.70 && pos.y <= 0.88 && abs(pos.x) < 0.20)) {
         // Harmonic speech cadence
         float speakCadence = sin(t * 13.0) * 0.5 + sin(t * 19.0) * 0.3 + sin(t * 7.0) * 0.2;
-        
+
         // Z displacement (speaking motion)
         float mouthDist = length(vec2(pos.x, pos.y - 0.82));
         float lipFactor = (1.0 - smoothstep(0.0, 0.18, mouthDist));
         pos.z += speakCadence * 0.03 * lipFactor;
-        
+
         // Jaw drop / lip stretch
         pos.y += speakCadence * 0.012 * sign(pos.y - 0.82) * lipFactor;
       }
