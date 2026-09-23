@@ -5,6 +5,10 @@ uniform float uTime;
 uniform float uMaterialize; // 0.0 to 1.0 (2 second transition)
 uniform float uMode;        // 0: idle, 1: listening, 2: thinking, 3: speaking
 uniform float uReducedMotion; // 0.0 or 1.0
+uniform vec3 uTint;         // The Crossing: side light (dream / good / neutral / bad)
+uniform float uTintMix;     // 0.0 at home keeps the original crystal palette
+uniform float uGain;        // side brightness
+uniform float uCross;       // 0 -> 1 -> 0 while crossing: scatter out, re-form
 
 attribute vec3 aTargetPosition;
 attribute vec3 color;
@@ -78,6 +82,13 @@ void main() {
     }
   }
 
+  // 4. The Crossing: every particle flies outward along its own direction, then re-forms
+  if (uCross > 0.001) {
+    vec3 fromCenter = pos - vec3(0.0, 0.7, 0.0) + aNoise * 0.25;
+    float spread = max(length(fromCenter), 0.001);
+    pos += (fromCenter / spread * 0.7 + aNoise * 0.22) * uCross;
+  }
+
   // Color & Alpha calculation
   vec3 finalColor = color;
   float alpha = aFeature == 6.0 ? 0.07 : 0.36;
@@ -110,6 +121,10 @@ void main() {
     finalColor = vec3(0.3, 0.85, 1.0) * ringPulse;
     alpha = 0.12;
   }
+
+  // Side light for the Crossing, applied last so the emitter ring shifts with it
+  finalColor = mix(finalColor, uTint, uTintMix) * uGain;
+  alpha *= 1.0 - 0.3 * uCross;
 
   vColor = finalColor;
   vAlpha = alpha * smoothstep(-0.12, 0.08, matScanY - aTargetPosition.y);
@@ -168,6 +183,10 @@ export function createHologramMaterial(): THREE.ShaderMaterial {
       uMaterialize: { value: 0 },
       uMode: { value: 0 }, // 0: idle, 1: listening, 2: thinking, 3: speaking
       uReducedMotion: { value: 0 },
+      uTint: { value: new THREE.Vector3(0.2, 0.7, 1.0) },
+      uTintMix: { value: 0 },
+      uGain: { value: 1 },
+      uCross: { value: 0 },
     },
     transparent: true,
     blending: THREE.AdditiveBlending,

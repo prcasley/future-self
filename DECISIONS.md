@@ -20,3 +20,15 @@ At the user's explicit request, Antigravity implemented the procedural bust, sha
 Super and Nano passed live checks. Correct Nano ID: `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B`. Omni/flux were absent from the account's catalog; separate endpoints remain untested. No real voice fixture was supplied. Sandbox project ID is missing; no successful fork is claimed.
 
 The first live correction test exposed a model asking for confirmation without staging the tool. Tightened tool instructions; the rerun correctly staged, confirmed and undid the replacement. Broader recorded-voice regression testing is still needed.
+
+## The Other Side — September 23, 2026 (Claude, on top of PR #1)
+
+- Product renamed to **The Other Side**. ECHO stays the character. FUTURE//SELF remains in the Devpost history as the working title.
+- The Crossing is a deterministic local simulation first (`otherside.py`), seeded by (side, goals, policy) so a side replays identically and can be audited. Sandboxes are a runner behind the same script, not a dependency: no fork is claimed until a project ID exists and a fork succeeds.
+- ECHO narrates a side with a second Super call constrained to the simulated numbers; on any failure the deterministic template postcard is spoken instead. The side persona is a system message; the server, not the model, owns `side`.
+- Goal changes invalidate every simulated side. Crossing is undoable; simulations are cheap and re-run on demand.
+- The Lab requires spoken consent (server-staged confirmation), stores only numbers and decisions, exports without free text, and wipes with confirmation. Rule policy is the applied default; the bandit and the model run in shadow so the logs support offline comparison.
+- The model policy is best-effort and runs after the check-in answer is computed; it never blocks or changes what the user hears.
+- Tool arguments may now be numbers or booleans; the server coerces them to strings and still validates against the advertised schema.
+- **Integration (Sep 23, Claude, following Codex's priority #1):** the Crossing/Lab commit was re-applied on top of Codex's `feat/voice-foundation` head, which carries the Antigravity procedural bust. Codex's hologram is the base; nothing in its geometry, modes, materialization or reduced-motion handling was replaced. The crossing now lives in the shader as four uniforms — `uTint`, `uTintMix`, `uGain`, `uCross` — set per frame from the `side` prop (1.6 s scatter-and-reform, side light applied last so the emitter ring shifts too; no scatter under reduced motion). The stage passes `mode` (Codex's lifecycle wiring, with the `talking` state added so speaking re-renders) and `side` together. Footer keeps Codex's "original digital persona" label and adds "scenario, not prediction" on a side.
+- The Lab remains a research prototype. No claim that it improves decisions until real longitudinal data exists (Codex's note, adopted).

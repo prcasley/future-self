@@ -302,3 +302,128 @@ footer {
     font-size: 21px;
   }
 }
+
+/* The Other Side */
+.postcard {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 18px;
+  line-height: 1.55;
+  border-left: 2px solid var(--blue);
+  padding: 4px 0 4px 16px;
+  margin: 18px 0 22px;
+}
+.sides {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.side {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px;
+  min-width: 0;
+  --tint: #a3ceff;
+}
+.side.dream {
+  --tint: #ffe59e;
+}
+.side.good {
+  --tint: #8cd1ff;
+}
+.side.neutral {
+  --tint: #a8b3c7;
+}
+.side.bad {
+  --tint: #db7599;
+}
+.side.active {
+  border-color: var(--tint);
+  box-shadow: 0 0 24px -12px var(--tint);
+}
+.side .eyebrow {
+  color: #fff;
+}
+.side-number {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 30px;
+  font-weight: 500;
+  letter-spacing: -1px;
+  margin: 8px 0 2px;
+  font-variant-numeric: tabular-nums;
+}
+.side-number span {
+  font-family: "DM Sans", sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  margin-left: 6px;
+}
+.side-meta {
+  font-size: 13px;
+  margin: 8px 0 0;
+  line-height: 1.5;
+}
+.side-domain {
+  font-size: 13px;
+  margin: 6px 0 0;
+}
+.spark-line {
+  width: 100%;
+  height: 56px;
+  display: block;
+  margin-top: 6px;
+}
+.spark-line polyline {
+  stroke: var(--tint, #a3ceff);
+}
+.spark-line .spark-axis {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.spark-line.strain {
+  display: inline-block;
+  width: 120px;
+  height: 28px;
+  vertical-align: middle;
+  --tint: #db7599;
+}
+.orbit.dream {
+  border-color: #ffe59e60;
+  box-shadow: 0 0 40px #ffe59e20;
+}
+.orbit.neutral {
+  border-color: #a8b3c760;
+}
+.orbit.bad {
+  border-color: #db759960;
+  box-shadow: 0 0 40px #db759920;
+}
+.lab-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin: 12px 0 18px;
+  font-variant-numeric: tabular-nums;
+}
+.lab-table th {
+  text-align: left;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.lab-table td {
+  padding: 7px 8px;
+  border-bottom: 1px solid #16223480;
+}
+.lab-table tr.active td {
+  color: var(--blue);
+}
+.side-meta a {
+  color: #fff;
+}
+@media (max-width: 760px) {
+  .sides {
+    grid-template-columns: 1fr;
+  }
+}

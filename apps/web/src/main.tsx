@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Hologram } from "./Hologram";
+import { LabPanel, OtherSidePanel, SIDE_LABELS } from "./Panels";
 import { turn, type EchoState } from "./api";
 import "./style.css";
 
@@ -10,6 +11,23 @@ const empty: EchoState = {
   panel: "goals",
   pending: null,
   revision: 0,
+  side: null,
+  futures: {},
+  lab: {
+    consent: false,
+    active: "rule",
+    checkins: 0,
+    decisions: 0,
+    last: null,
+  },
+};
+// ECHO's voice shifts with the side it speaks from.
+const VOICES: Record<string, { rate: number; pitch: number }> = {
+  home: { rate: 1, pitch: 1 },
+  dream: { rate: 1, pitch: 1.06 },
+  good: { rate: 1, pitch: 1.02 },
+  neutral: { rate: 0.96, pitch: 0.96 },
+  bad: { rate: 0.92, pitch: 0.9 },
 };
 const session = localStorage.getItem("echo-session") || crypto.randomUUID();
 localStorage.setItem("echo-session", session);
@@ -25,6 +43,9 @@ function App() {
   const [did, setDid] = useState("");
   const [ledger, setLedger] = useState<any[]>([]);
   const [configured, setConfigured] = useState(false);
+  const [talking, setTalking] = useState(false);
+  const sideRef = useRef<string | null>(null);
+  sideRef.current = state.side;
   const recognition = useRef<any>(null);
   const controller = useRef<AbortController | null>(null);
   const enabled = useRef(false);
@@ -71,14 +92,22 @@ function App() {
       return;
     }
     speaking.current = true;
+    setTalking(true);
     recognition.current?.abort();
-    setStatus("ECHO is speaking · hold Space to interrupt");
+    setStatus(
+      sideRef.current
+        ? `Speaking from the ${SIDE_LABELS[sideRef.current].toLowerCase()} · hold Space to interrupt`
+        : "ECHO is speaking · hold Space to interrupt",
+    );
     const speechGeneration = generation.current;
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1;
+    const voice = VOICES[sideRef.current || "home"] || VOICES.home;
+    utterance.rate = voice.rate;
+    utterance.pitch = voice.pitch;
     utterance.onend = utterance.onerror = () => {
       if (speechGeneration !== generation.current) return;
       speaking.current = false;
+      setTalking(false);
       if (enabled.current) {
         setStatus("Listening");
         listen();
@@ -144,6 +173,7 @@ function App() {
       recognition.current?.abort();
       speechSynthesis.cancel();
       speaking.current = false;
+      setTalking(false);
       setStatus("Session ended");
       return;
     }
@@ -222,6 +252,7 @@ function App() {
     controller.current = null;
     speechSynthesis.cancel();
     speaking.current = false;
+    setTalking(false);
     if (enabled.current) {
       setStatus("Listening");
       listen();
@@ -246,7 +277,7 @@ function App() {
     <main>
       <header>
         <a className="brand" href="/">
-          FUTURE<span>//</span>SELF
+          THE OTHER <span>SIDE</span>
         </a>
         <div className="controls">
           <button className="primary" onClick={start}>
@@ -279,32 +310,46 @@ function App() {
         </div>
       </header>
       <section className="intro">
-        <div className="eyebrow">YOUR NEXT CHAPTER · VOICE FOUNDATION</div>
-        <h1>Meet who you’re becoming.</h1>
-        <p>Speak freely. ECHO helps you give your future a direction.</p>
+        <div className="eyebrow">THE OTHER SIDE · VOICE ONLY</div>
+        <h1>Meet the you on the other side.</h1>
+        <p>
+          Speak freely. ECHO listens, remembers, and shows you where your
+          choices lead.
+        </p>
       </section>
       <div className="stage">
         <section className="presence">
           <div className="stage-label">
             <span className={running ? "light live" : "light"} />
-            {running ? "SESSION ACTIVE" : "ECHO · STANDING BY"}
+            {state.side
+              ? `SPEAKING FROM · ${SIDE_LABELS[state.side].toUpperCase()}`
+              : running
+                ? "SESSION ACTIVE"
+                : "ECHO · STANDING BY"}
           </div>
           <Hologram
             active={running}
+            side={state.side}
             mode={
               !running
                 ? "idle"
-                : speaking.current
+                : talking || speaking.current
                   ? "speaking"
                   : busy.current
                     ? "thinking"
                     : "listening"
             }
           />
-          <div className="orbit" />
+          <div className={"orbit" + (state.side ? " " + state.side : "")} />
           <div className="presence-footer">
-            ONE POSSIBLE FUTURE
-            <span>ORIGINAL DIGITAL PERSONA · NOT YOUR LIKENESS</span>
+            {state.side
+              ? "ONE POSSIBLE FUTURE · 52 WEEKS OUT"
+              : "ONE POSSIBLE FUTURE"}
+            <span>
+              {state.side
+                ? "ORIGINAL DIGITAL PERSONA · SCENARIO, NOT PREDICTION"
+                : "ORIGINAL DIGITAL PERSONA · NOT YOUR LIKENESS"}
+            </span>
           </div>
         </section>
         <aside>
@@ -313,9 +358,17 @@ function App() {
               ? "OUTBOUND CALLS"
               : state.panel === "memory"
                 ? "WHAT I REMEMBER"
-                : "YOUR DIRECTION"}
+                : state.panel === "otherside"
+                  ? "THE OTHER SIDE"
+                  : state.panel === "lab"
+                    ? "THE LAB · PUSH, MAINTAIN, REDUCE"
+                    : "YOUR DIRECTION"}
           </div>
-          {state.panel === "privacy" ? (
+          {state.panel === "otherside" ? (
+            <OtherSidePanel state={state} />
+          ) : state.panel === "lab" ? (
+            <LabPanel state={state} session={session} />
+          ) : state.panel === "privacy" ? (
             <>
               <h2>A visible footprint.</h2>
               <p>
@@ -382,9 +435,12 @@ function App() {
           <div className="try">
             <div className="eyebrow">TRY SAYING</div>
             <p>“I want to build my first app.”</p>
-            <p>“Remember I work best in the morning.”</p>
-            <p>“Show my memory.”</p>
-            <p>“Undo that.”</p>
+            <p>“Show me my dream life.” · “What if I drift?”</p>
+            <p>
+              “Turn on the lab.” then “Check in: slept six, energy three, stress
+              four, forty minutes, done.”
+            </p>
+            <p>“That was too much.” · “Come back.” · “Undo that.”</p>
           </div>
         </aside>
       </div>

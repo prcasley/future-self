@@ -1,4 +1,4 @@
-# FUTURE//SELF: contest readiness
+# The Other Side (formerly FUTURE//SELF): contest readiness
 
 Updated September 22, 2026. A competitive plan, not a promise of winning.
 
@@ -60,3 +60,7 @@ Aim to finish the voice/memory core by Oct 4, missions/judgment by Oct 11, futur
 ## User inputs still needed
 
 Real voice recordings; a few honest daily reports; consented appearance reference if personalization is wanted; final preferences for check-in time; judging-account/deployment setup; feedback from target users. Credit applications are separate from credited balances, so confirm the actual balance before deployment.
+
+## Integration update — September 23 (Claude)
+
+Codex's priority #1 is done on branch `feat/the-other-side-integrated`: the Crossing and the Lab now run on top of the procedural bust, with the crossing ported into the shader rather than the old point cloud. Offline evidence only: 20 backend tests, 2 stream-client tests, ruff, type check and production build pass; a headless Chromium run with a scripted speech-recognition stub loaded a session on the dream side, heard "come back", returned home through the real API, and the crossing was captured at 0/25/50/75/100% under a paused clock. The only console error was Google Fonts being blocked by the test sandbox. Nothing here is evidence of real-microphone behavior, latency, or that the Lab improves decisions; priority #2 (real speech with the user's microphone) is next and belongs to the user. The table above is unchanged and remains the guide.

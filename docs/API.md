@@ -22,3 +22,18 @@ Cancellation may end without `done`. Refresh `/state/{session_id}` after interru
 `GET /tts` returns 204 for browser synthesis. `GET /health` reports local process status and key configuration, not an upstream ping. `GET /ledger` returns the latest 30 backend call metadata rows. `GET /state/{session_id}` returns state.
 
 These routes are for local development and have no public authentication.
+
+## The Other Side and the Lab — v0.2
+
+New tools the model may call: `cross(side)`, `return_home()`, `log_checkin(sleep_hours, energy, stress, effort_minutes, completed)`, `rate_intensity(rating)`, `set_lab_consent(yes)`, `wipe_lab()`. `show` accepts `otherside` and `lab`. Spoken shortcuts handled without the model: “come back”, “too much” / “just right” / “too little”.
+
+The `state` event now carries `side`, `futures` (per-side summary: final, bands, stats, 13-point curves, narrative) and `lab` (consent, active policy, counts, last decision). Week-by-week detail is never in the state event.
+
+| Route | Purpose |
+| --- | --- |
+| `GET /otherside/{session}` | Full 52-week detail for every simulated side, with disclaimer |
+| `GET /lab/{session}` | Per-policy scorecard, bandit posteriors, last decision |
+| `GET /lab/{session}/experiment?side=good` | Same side, three intensity policies in the simulator |
+| `GET /lab/{session}/export` | Anonymized JSONL (check-ins, features, decisions, rewards) |
+
+After a `cross` tool result the stream emits `status` “Crossing…” and the spoken `sentence` is ECHO speaking from that side.

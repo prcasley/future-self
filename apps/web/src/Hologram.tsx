@@ -11,7 +11,22 @@ export interface HologramProps {
   active: boolean;
   /** Optional mode controlling state-driven animations */
   mode?: HologramMode;
+  /** The Crossing: which side ECHO is speaking from (null = home) */
+  side?: string | null;
 }
+
+// Side light for the Crossing. Home keeps the original crystal palette (mix 0).
+const SIDE_LIGHT: Record<
+  string,
+  { tint: [number, number, number]; mix: number; gain: number }
+> = {
+  home: { tint: [0.2, 0.7, 1.0], mix: 0, gain: 1 },
+  dream: { tint: [1.0, 0.84, 0.5], mix: 0.6, gain: 1.1 },
+  good: { tint: [0.45, 0.8, 1.0], mix: 0.35, gain: 1.05 },
+  neutral: { tint: [0.62, 0.66, 0.74], mix: 0.65, gain: 0.8 },
+  bad: { tint: [0.85, 0.35, 0.55], mix: 0.6, gain: 0.8 },
+};
+const CROSSING_MS = 1600;
 
 const MODE_MAP: Record<HologramMode, number> = {
   idle: 0,
@@ -20,9 +35,24 @@ const MODE_MAP: Record<HologramMode, number> = {
   speaking: 3,
 };
 
-export function Hologram({ active, mode }: HologramProps) {
+export function Hologram({ active, mode, side }: HologramProps) {
   const mount = useRef<HTMLDivElement>(null);
   const [webglFailed, setWebglFailed] = useState(false);
+
+  // The Crossing: remember where we came from so the light and scatter can transition.
+  const sideKey = side && SIDE_LIGHT[side] ? side : "home";
+  const sideRef = useRef(sideKey);
+  const crossing = useRef({ from: sideKey, to: sideKey, start: -Infinity });
+  useEffect(() => {
+    if (sideKey !== sideRef.current) {
+      crossing.current = {
+        from: sideRef.current,
+        to: sideKey,
+        start: performance.now(),
+      };
+      sideRef.current = sideKey;
+    }
+  }, [sideKey]);
 
   // Derive target mode: explicit prop takes precedence, otherwise fallback to active
   const currentMode: HologramMode = mode || (active ? "listening" : "idle");
@@ -112,6 +142,26 @@ export function Hologram({ active, mode }: HologramProps) {
       material.uniforms.uMaterialize.value = materialize;
       material.uniforms.uMode.value = MODE_MAP[modeRef.current];
 
+      // The Crossing: scatter out and re-form while the side light blends over
+      const cross = crossing.current;
+      const t = Math.min(
+        1,
+        Math.max(0, (currentTime - cross.start) / CROSSING_MS),
+      );
+      const from = SIDE_LIGHT[cross.from];
+      const to = SIDE_LIGHT[cross.to];
+      const lerp = (a: number, b: number) => a + (b - a) * t;
+      material.uniforms.uTint.value.set(
+        lerp(from.tint[0], to.tint[0]),
+        lerp(from.tint[1], to.tint[1]),
+        lerp(from.tint[2], to.tint[2]),
+      );
+      material.uniforms.uTintMix.value = lerp(from.mix, to.mix);
+      material.uniforms.uGain.value = lerp(from.gain, to.gain);
+      material.uniforms.uCross.value = reducedMotion
+        ? 0
+        : Math.sin(Math.PI * t);
+
       // Micro head motion & gentle sway unless reduced motion is preferred
       if (!reducedMotion) {
         bustMesh.rotation.y = Math.sin(elapsed * 0.35) * 0.12;
@@ -173,7 +223,7 @@ export function Hologram({ active, mode }: HologramProps) {
     <div
       className={`hologram hologram-mode-${currentMode}`}
       ref={mount}
-      aria-label={`Sculpted Human Hologram presence for ECHO, status: ${currentMode}`}
+      aria-label={`Sculpted Human Hologram presence for ECHO, status: ${currentMode}${sideKey !== "home" ? `, speaking from the ${sideKey} side` : ""}`}
       role="img"
     >
       <div className="hologram-overlay-scanlines" />

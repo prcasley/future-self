@@ -1,6 +1,8 @@
-# FUTURE//SELF
+# The Other Side
 
 [MIT licensed](LICENSE) · Voice-only personal AI · NVIDIA Nemotron on Nebius Token Factory
+
+Talk to the you on the other side of your choices. ECHO listens, remembers, simulates four possible years from your own goals, speaks to you from each one, and runs a live research study on when to push, maintain, or reduce. Formerly FUTURE//SELF.
 
 ## Planned experience
 
@@ -8,7 +10,24 @@ Speak with ECHO, a personalized future-self hologram. Set goals, create daily mi
 
 ## Status
 
-The first local prototype is runnable: browser speech input and output, streamed Nebius replies, persistent goals and explicit memories, spoken confirmation, undo, and a procedural Three.js human hologram. The hologram is an original stylized persona with idle/listening/thinking/speaking states, reduced-motion support and responsive framing. It is not a scanned likeness or phoneme lip-sync. It is not yet the complete hackathon application.
+The local prototype is runnable: browser speech input and output, streamed Nebius replies, persistent goals and explicit memories, spoken confirmation, undo, a procedural Three.js human hologram, **the Crossing** (four simulated sides you can talk to) and **the Lab** (the push / maintain / reduce research instrument). The hologram is an original stylized persona with idle/listening/thinking/speaking states, per-side light during a crossing, reduced-motion support and responsive framing. It is not a scanned likeness or phoneme lip-sync. The Lab is a research prototype: it needs real longitudinal data before anyone can claim it improves decisions. It is not yet the complete hackathon application.
+
+## The Crossing
+
+Say “show me my dream life”, “show me the good path”, “what if I drift”, or “show me the hard road”. ECHO runs a deterministic 52-week simulation of your goals on that side (`apps/api/otherside.py`), the hologram crosses over (the bust scatters and re-forms in that side's light, via shader uniforms on the procedural bust), and ECHO speaks to you **as that future self**, grounded only in the simulated numbers. Say “come back” to return. Every side is labeled a scenario from your own goals and stated assumptions, never a prediction, and the narration prompt forbids invented events, health outcomes, or shame.
+
+| Side | Weekly hours | Consistency | Recovery discipline | Outside shocks |
+| --- | --- | --- | --- | --- |
+| Dream life | 12 | 90% | 85% | 5% |
+| Good path | 7 | 75% | 70% | 8% |
+| Neutral drift | 3.5 | 55% | 50% | 10% |
+| Hard road | 1.5 | 35% | 30% | 15% |
+
+Dynamics: progress has diminishing returns and momentum; strain rises with hours (pushing past the plan costs 1.8× more), falls with recovery; strain over 0.8 loses the week; three burnouts in eight weeks break the plan and lower consistency for good. With Lab consent, your real check-ins set the starting strain and momentum. The same engine powers the Lab's policy experiment. Sandboxes: when `NEBIUS_PROJECT_ID` is set the plan is to fork one Token Factory Sandbox per side and run the identical script there (runner `contree`); today the runner is `local` and says so in the state.
+
+## The Lab
+
+A research instrument inside the app. **Question:** can an agent infer when to push, maintain, or reduce goal intensity from longitudinal behavioral signals, better than a constant policy, without raising strain? Say “turn on the lab” (spoken consent required), then check in daily by voice: “slept six, energy three, stress four, forty minutes, done.” ECHO answers with tomorrow's call and its reasons. Three policies decide every day — a transparent capacity **rule**, a contextual **bandit** (Thompson sampling over capacity buckets), and the **model** (Nemotron, shadow only) — one is applied, all are logged. The next check-in scores yesterday's call; you can also say “too much”, “just right”, or “too little”. The Lab panel shows the decision, its evidence, a per-policy scorecard, and the same three policies run in the simulator. `GET /lab/{session}/export` returns anonymized JSONL with no goal text or facts. Design, hypotheses and limitations: [docs/LAB.md](docs/LAB.md).
 
 ## Planned stack
 
@@ -42,7 +61,7 @@ npm ci
 npm run dev
 ```
 
-Open **http://127.0.0.1:5186**, click Start session and allow your microphone. Try “My career goal is to build my first app. Save that goal,” then “Change my career goal to learning Python,” “Yes,” and “Undo that.” Also try “Remember I work best in the morning” and “Show my memory.”
+Open **http://127.0.0.1:5186**, click Start session and allow your microphone. Try “My career goal is to build my first app. Save that goal,” then “Change my career goal to learning Python,” “Yes,” and “Undo that.” Also try “Remember I work best in the morning” and “Show my memory.” Then “Show me my dream life,” “Come back,” “Turn on the lab,” “Yes,” and “Check in: slept six, energy three, stress four, forty minutes, done.”
 
 Press Space with the page focused to interrupt ECHO. Mute silences output; End session stops recognition. Recognition pauses during playback to avoid transcribing ECHO's own speech. Automatic barge-in is still planned.
 
@@ -83,13 +102,13 @@ cd apps/web
 npm run build
 ```
 
-Nine offline backend tests and the frontend production build pass. The live synthetic goal/correction/confirmation/undo sequence passes. The page was inspected on desktop and at 400px. Physical microphone capture, speech audibility, recognition accuracy and end-to-end latency have not been verified.
+Twenty offline backend tests (voice foundation, the Crossing, the Lab) and the frontend production build pass. The live synthetic goal/correction/confirmation/undo sequence passes. The page was inspected on desktop and at 400px. Physical microphone capture, speech audibility, recognition accuracy and end-to-end latency have not been verified.
 
 ## Next milestones
 
-Real voice fixtures; Silero VAD and automatic barge-in; sentence-chunk playback; normalized SQLModel/FTS5 memory and Nano summaries; adaptive missions and capacity evidence; verified sandbox futures; portrait generation; inbox; privacy export/wipe; authenticated deployment and guided demo.
+Real voice fixtures; Silero VAD and automatic barge-in; sentence-chunk playback; normalized SQLModel/FTS5 memory and Nano summaries; missions generated from goals and adapted by Lab decisions; sandbox-backed sides with real image IDs; portrait generation; inbox; privacy export/wipe; authenticated deployment and guided demo.
 
-See [DECISIONS.md](DECISIONS.md), [Claude plan handoff](docs/PLAN.md), [API contract](docs/API.md), and [prioritized contest checklist](docs/CONTEST-READINESS.md).
+See [DECISIONS.md](DECISIONS.md), [Claude plan handoff](docs/PLAN.md), [API contract](docs/API.md), [Lab research design](docs/LAB.md), and [prioritized contest checklist](docs/CONTEST-READINESS.md).
 
 ## License
 

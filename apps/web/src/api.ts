@@ -1,10 +1,76 @@
+export type Future = {
+  label: string;
+  final: Record<string, number>;
+  bands: Record<string, string>;
+  stats: {
+    burnout_weeks: number;
+    breaks: number;
+    active_weeks: number;
+    avg_strain: number;
+    avg_progress: number;
+  };
+  avg_curve: number[];
+  strain_curve: number[];
+  narrative: string | null;
+  runner: string;
+};
+export type Decision = {
+  id: number;
+  applied: string;
+  why: string;
+  target_minutes: number;
+  bucket: string;
+  features: Record<string, number>;
+  recommendations: Record<string, string | null>;
+  reasons: Record<string, string | null>;
+  rating: string | null;
+  reward: number | null;
+};
+export type LabState = {
+  consent: boolean;
+  active: string;
+  checkins: number;
+  decisions: number;
+  last: Decision | null;
+};
+export type LabSummary = LabState & {
+  policies: Record<
+    string,
+    {
+      decisions: number;
+      distribution: Record<string, number>;
+      just_right_rate: number | null;
+      mean_reward_when_applied: number | null;
+    }
+  >;
+  bandit: Record<string, Record<string, [number, number]>>;
+};
+export type Experiment = {
+  side: string;
+  weeks: number;
+  rows: {
+    policy: string;
+    avg_progress: number;
+    burnout_weeks: number;
+    active_weeks: number;
+    avg_strain: number;
+  }[];
+};
 export type EchoState = {
   goals: Record<string, string>;
   facts: string[];
   panel: string;
   pending: null | { name: string; args: Record<string, string> };
   revision: number;
+  side: string | null;
+  futures: Record<string, Future>;
+  lab: LabState;
 };
+export async function getJSON<T>(path: string): Promise<T> {
+  const response = await fetch("/api" + path);
+  if (!response.ok) throw new Error("Request failed");
+  return (await response.json()) as T;
+}
 export type EchoEvent = { event: string; data: any };
 export async function* turn(
   session_id: string,
