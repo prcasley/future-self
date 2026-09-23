@@ -289,11 +289,22 @@ function App() {
             <span className={running ? "light live" : "light"} />
             {running ? "SESSION ACTIVE" : "ECHO · STANDING BY"}
           </div>
-          <Hologram active={running} />
+          <Hologram
+            active={running}
+            mode={
+              !running
+                ? "idle"
+                : speaking.current
+                  ? "speaking"
+                  : busy.current
+                    ? "thinking"
+                    : "listening"
+            }
+          />
           <div className="orbit" />
           <div className="presence-footer">
             ONE POSSIBLE FUTURE
-            <span>ABSTRACT PRESENCE · PORTRAIT COMING LATER</span>
+            <span>ORIGINAL DIGITAL PERSONA · NOT YOUR LIKENESS</span>
           </div>
         </section>
         <aside>

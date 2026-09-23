@@ -1,5 +1,9 @@
 # Implementation decisions — September 22, 2026
 
+## September 23 update: Antigravity collaboration
+
+At the user's explicit request, Antigravity implemented the procedural bust, shaders and hologram CSS in the frontend workspace. Codex wired lifecycle modes, reviewed the rendered result, corrected glow/geometry/framing, fixed reversed GLSL smoothstep bounds, and completed reduced-motion handling. Desktop and 400px views were inspected; production build passed and no browser console errors were observed. This replaces the earlier 24,000-point placeholder decision below. Physical audio and performance benchmarks remain outstanding.
+
 - Read the full Claude war-room artifact: architecture, voice spec, all six sprint tabs, demo script and handoffs. Preserve voice and memory before futures.
 - Use browser recognition because Omni was not in the account's live catalog. No GPU endpoint was started.
 - Start with a small local SQLite state store. Normalized SQLModel/FTS5 entities remain future work. Public hosting needs authentication, ownership checks, quotas and a deliberate storage design.

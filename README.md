@@ -8,7 +8,7 @@ Speak with ECHO, a personalized future-self hologram. Set goals, create daily mi
 
 ## Status
 
-The first local prototype is runnable: browser speech input and output, streamed Nebius replies, persistent goals and explicit memories, spoken confirmation, undo, and a Three.js abstract presence. It is not yet the complete hackathon application.
+The first local prototype is runnable: browser speech input and output, streamed Nebius replies, persistent goals and explicit memories, spoken confirmation, undo, and a procedural Three.js human hologram. The hologram is an original stylized persona with idle/listening/thinking/speaking states, reduced-motion support and responsive framing. It is not a scanned likeness or phoneme lip-sync. It is not yet the complete hackathon application.
 
 ## Planned stack
 
@@ -89,7 +89,7 @@ Nine offline backend tests and the frontend production build pass. The live synt
 
 Real voice fixtures; Silero VAD and automatic barge-in; sentence-chunk playback; normalized SQLModel/FTS5 memory and Nano summaries; adaptive missions and capacity evidence; verified sandbox futures; portrait generation; inbox; privacy export/wipe; authenticated deployment and guided demo.
 
-See [DECISIONS.md](DECISIONS.md), [Claude plan handoff](docs/PLAN.md), and [API contract](docs/API.md).
+See [DECISIONS.md](DECISIONS.md), [Claude plan handoff](docs/PLAN.md), [API contract](docs/API.md), and [prioritized contest checklist](docs/CONTEST-READINESS.md).
 
 ## License
 
