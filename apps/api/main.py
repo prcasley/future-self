@@ -11,7 +11,7 @@ from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from . import avatar, otherside, scan
+from . import avatar, daily, otherside, scan
 from . import lab as labmod
 from .store import PANELS, Store, act, public
 
@@ -37,6 +37,7 @@ locks = defaultdict(asyncio.Lock)
 class Turn(BaseModel):
     session_id: UUID
     text: str = Field(min_length=1, max_length=4000)
+    timezone: str | None = Field(default=None, max_length=100)
 
 
 class Projection(BaseModel):
@@ -67,6 +68,11 @@ def tool(name, description, properties, required):
 STRING = {"type": "string", "maxLength": 600}
 NUMBER = {"type": "string", "maxLength": 12, "description": "A number, spoken. Send digits."}
 TOOLS = [
+    tool("get_mission", "Get a practical mission sized by the latest Lab target or a 15-minute starter. Optionally select an existing goal domain.", {"domain": STRING}, []),
+    tool("complete_mission", "Mark the current mission done only on the user's explicit report. This does not log a Lab check-in.", {}, []),
+    tool("schedule_checkin", "Only when requested: set one daily in-app reminder at a 24-hour HH:MM time. Ask about AM/PM if ambiguous. Browser timezone is used. No notifications outside the app.", {"time": STRING}, ["time"]),
+    tool("stop_reminders", "Disable the user's daily in-app reminder.", {}, []),
+    tool("read_messages", "Read the latest scheduled in-app check-in.", {}, []),
     tool(
         "set_goal",
         "Call immediately for every new or changed goal. Server handles confirmation for replacements; never ask first.",
@@ -332,6 +338,17 @@ def ledger():
     return store.ledger()
 
 
+@app.post("/daily/{session_id}/poll")
+async def daily_poll(session_id: UUID):
+    session = str(session_id)
+    async with locks[session]:
+        state = store.load(session)
+        if daily.deliver(state):
+            state["revision"] += 1
+            store.save(session, state)
+        return public(state)
+
+
 @app.get("/otherside/{session_id}")
 def otherside_detail(session_id: UUID):
     """Week-by-week detail for every simulated side. Scenario data, not prediction."""
@@ -438,6 +455,8 @@ async def text_turn(turn: Turn):
     async def stream():
         async with locks[session]:
             state = store.load(session)
+            if turn.timezone and daily.valid_timezone(turn.timezone):
+                state["timezone"] = turn.timezone
             yield event("transcript", {"text": turn.text, "source": "browser_asr"})
             normalized = turn.text.lower().strip(" .!?")
             answer = None
@@ -464,6 +483,9 @@ async def text_turn(turn: Turn):
                         "rate_intensity",
                         {"rating": normalized.replace("that was ", "").replace(" ", "_")},
                     )
+                elif (command := daily.shortcut(turn.text)) is not None:
+                    state["pending"] = None
+                    action, args = command
                 elif (look := avatar.parse(normalized)) is not None:
                     # A look change is a new topic: it expires any pending confirmation.
                     state["pending"] = None

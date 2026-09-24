@@ -57,6 +57,11 @@ export type Experiment = {
   }[];
 };
 export type EchoState = {
+  daily: {
+    mission: null | { goal: string; minutes: number; done: boolean; steps: {minutes: number; text: string}[]; basis: string; disclaimer: string };
+    schedule: null | {time: string; timezone: string; enabled: boolean};
+    messages: {id: string; date: string; text: string}[];
+  };
   goals: Record<string, string>;
   facts: string[];
   panel: string;
@@ -110,7 +115,7 @@ export async function* turn(
   const response = await fetch("/api/voice/text_turn", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ session_id, text }),
+    body: JSON.stringify({ session_id, text, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }),
     signal,
   });
   if (!response.ok || !response.body)

@@ -20,6 +20,7 @@ const CLOSE_SCAN =
   /^\s*(close( it| the scan)?|done|that's enough|exit|hide (it|the scan))\s*[.!]?\s*$/i;
 
 const empty: EchoState = {
+  daily: {mission: null, schedule: null, messages: []},
   goals: {},
   facts: [],
   panel: "goals",
@@ -77,6 +78,25 @@ function App() {
   const speaking = useRef(false);
   const generation = useRef(0);
   const busy = useRef(false);
+  useEffect(() => {
+    let alive = true;
+    let pending = false;
+    const poll = async () => {
+      if (pending || document.hidden || busy.current) return;
+      pending = true;
+      try {
+        const response = await fetch(`/api/daily/${session}/poll`, {method: "POST"});
+        if (!response.ok) return;
+        const next: EchoState = await response.json();
+        if (alive) setState(previous => next.revision >= previous.revision ? next : previous);
+      } catch { /* keep the inbox available during an outage */ }
+      finally { pending = false; }
+    };
+    void poll();
+    const timer = window.setInterval(poll, 30000);
+    document.addEventListener("visibilitychange", poll);
+    return () => { alive = false; clearInterval(timer); document.removeEventListener("visibilitychange", poll); };
+  }, []);
   useEffect(() => {
     fetch("/api/state/" + session)
       .then((r) => r.json())
@@ -205,14 +225,14 @@ function App() {
     };
     speechSynthesis.speak(utterance);
   };
-  const submit = async (text: string) => {
+  const submit = async (text: string, spoken = true) => {
     const id = ++generation.current;
     busy.current = true;
     recognition.current?.abort();
     controller.current?.abort();
     speechSynthesis.cancel();
     speaking.current = false;
-    setHeard(text);
+    if (spoken) setHeard(text);
     setTalking(false);
     setDid("");
     const local = await photoCommand(text).catch(() => null);
@@ -350,6 +370,7 @@ function App() {
     setStatus("Listening");
     try {
       rec.start();
+      void submit("start my day", false);
     } catch {
       enabled.current = false;
       setRunning(false);
@@ -578,6 +599,17 @@ function App() {
               )}
             </>
           )}
+          {state.daily?.mission && (
+            <div className="card">
+              <div className="eyebrow">{state.daily.mission.done ? "MISSION COMPLETE" : "YOUR DAILY MISSION"} · {state.daily.mission.minutes} MIN</div>
+              <p>{state.daily.mission.goal}</p>
+              <ol>{state.daily.mission.steps.map((step, index) => <li key={index}>{step.minutes} min — {step.text}</li>)}</ol>
+              <p>{state.daily.mission.basis}</p>
+              <small>{state.daily.mission.disclaimer}</small>
+            </div>
+          )}
+          {state.daily?.schedule?.enabled && <p>Daily check-in · {state.daily.schedule.time} · {state.daily.schedule.timezone}. In-app only. Say “stop reminders” to cancel.</p>}
+          {!!state.daily?.messages.length && <div className="card" aria-live="polite"><div className="eyebrow">LATEST CHECK-IN · {state.daily.messages.at(-1)?.date}</div><p>{state.daily.messages.at(-1)?.text}</p></div>}
           {state.pending && (
             <div className="confirmation">
               A change is waiting.
@@ -588,6 +620,8 @@ function App() {
           <div className="try">
             <div className="eyebrow">TRY SAYING</div>
             <p>“I want to build my first app.”</p>
+            <p>“My goal is to learn Python.” · “What is my mission?”</p>
+            <p>“Mission complete.” · “Remind me daily at 9 AM.”</p>
             <p>“Show me my dream life.” · “What if I drift?”</p>
             <p>
               “Turn on the lab.” then “Check in: slept six, energy three, stress

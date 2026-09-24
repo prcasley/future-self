@@ -4,7 +4,7 @@ import json
 import sqlite3
 from pathlib import Path
 
-from . import avatar, otherside
+from . import avatar, daily, otherside
 from . import lab as labmod
 
 PANELS = ("goals", "memory", "privacy", "otherside", "lab")
@@ -43,6 +43,8 @@ class Store:
             "futures": {},
             "lab": labmod.new_lab(),
             "appearance": dict(avatar.DEFAULT),
+            "timezone": "UTC",
+            "daily": {"mission": None, "schedule": None, "messages": []},
         }
         for key, value in defaults.items():
             state.setdefault(key, value)
@@ -72,6 +74,7 @@ def public(state):
     """Compact state for the client and the model context. Never the week-by-week detail."""
     out = {key: state[key] for key in ("goals", "facts", "panel", "pending", "revision", "side")}
     out["appearance"] = dict(state["appearance"])
+    out["daily"] = state["daily"]
     out["futures"] = {
         side: {
             "label": f["label"],
@@ -102,6 +105,34 @@ def snapshot(state):
 
 
 def act(state, name, args, confirmed=False):
+    if name in ("open_day", "get_mission"):
+        state["pending"] = None
+        state["panel"] = "goals"
+        item = daily.mission(state, args.get("domain"))
+        if args.get("domain") and not item:
+            return "That goal isn't saved yet. Which saved goal should we work on?"
+        state["revision"] += 1
+        intro = "Welcome back. " if name == "open_day" and state["goals"] else ""
+        return intro + daily.describe(item)
+    if name == "complete_mission":
+        item = daily.mission(state)
+        if not item:
+            return daily.describe(None)
+        item["done"] = True
+        state["revision"] += 1
+        return "Marked your mission complete from your report. What helped, and what should we change next time?"
+    if name == "schedule_checkin":
+        answer = daily.schedule(state, args.get("time", ""))
+        state["revision"] += 1
+        return answer
+    if name == "stop_reminders":
+        if state["daily"]["schedule"]:
+            state["daily"]["schedule"]["enabled"] = False
+        state["revision"] += 1
+        return "Daily reminders are off."
+    if name == "read_messages":
+        messages = state["daily"]["messages"]
+        return messages[-1]["text"] if messages else "No scheduled messages yet. Say remind me daily at 9 AM to choose a time."
     if name == "recap":
         state["panel"] = "memory"
         goals = [f"Your {domain} goal is {goal}." for domain, goal in state["goals"].items()]
@@ -139,6 +170,8 @@ def act(state, name, args, confirmed=False):
             return "There is nothing to undo."
         before = state["undo"].pop()
         state.update(before)
+        state["daily"]["mission"] = None
+        daily.mission(state)
         state["revision"] += 1
         return "Undid the last change."
     if name == "confirm":
@@ -231,6 +264,7 @@ def act(state, name, args, confirmed=False):
         # Goals changed: every simulated side is stale.
         state["futures"] = {}
         result = f"Set your {args['domain']} goal: {args['goal']}."
+        result += " " + daily.describe(daily.mission(state, args["domain"]))
     elif name == "remember":
         if args["fact"] not in state["facts"]:
             state["facts"].append(args["fact"])
@@ -256,11 +290,13 @@ def log_checkin(state, args):
     except ValueError as error:
         return str(error)
     decision = labmod.record_checkin(lab, checkin)
+    daily.mission(state)
     state["panel"] = "lab"
     state["revision"] += 1
     return (
         f"Logged. Tomorrow: {decision['applied']}, {decision['target_minutes']} minutes on your goal. "
-        f"Why: {decision['why']}. Say too much, just right, or too little."
+        f"Why: {decision['why']}. This is a planning suggestion, not a proven capacity measure. "
+        "Your mission now uses this latest target. Say what is my mission, or rate this too much, just right, or too little."
     )
 
 
