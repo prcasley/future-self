@@ -113,8 +113,12 @@ function App() {
     if (!file) return;
     try {
       const blob = await normalizePhoto(file);
-      await savePhoto(blob);
+      const persisted = await savePhoto(blob);
       setPortrait(URL.createObjectURL(blob));
+      if (!persisted) {
+        setStatus("Photo ready for this visit. Browser storage is unavailable, so it may not survive a reload.");
+        return;
+      }
       setStatus(
         "Your photo stays on this device. Say “forget my photo” to remove it.",
       );
@@ -125,8 +129,10 @@ function App() {
   /** Photo commands never go to the server: the photo lives only in this browser. */
   const photoCommand = async (text: string): Promise<string | null> => {
     if (FORGET_PHOTO.test(text)) {
-      await forgetPhoto();
+      const removed = await forgetPhoto();
       setPortrait(null);
+      if (!removed)
+        return "I've hidden your photo for this visit, but couldn't confirm deletion from browser storage. Please clear this site's data in browser settings to remove any saved copy.";
       return "Done. Your photo is gone from this device, and I'm back to my own face.";
     }
     if (USE_PHOTO.test(text) && !portraitRef.current)
@@ -181,6 +187,7 @@ function App() {
     speechSynthesis.cancel();
     speaking.current = false;
     setHeard(text);
+    setTalking(false);
     setDid("");
     const local = await photoCommand(text).catch(() => null);
     if (local !== null) {
@@ -206,7 +213,10 @@ function App() {
           partial += item.data.text;
           setSaid(partial);
         }
-        if (item.event === "state") setState(item.data);
+        if (item.event === "state") {
+          sideRef.current = item.data.side;
+          setState(item.data);
+        }
         if (item.event === "status") setStatus(item.data.text);
         if (
           item.event === "tool_call" &&
@@ -376,6 +386,8 @@ function App() {
               if (value) {
                 speechSynthesis.cancel();
                 speaking.current = false;
+                setTalking(false);
+                if (enabled.current && !busy.current) setStatus("Listening");
                 listen();
               }
             }}

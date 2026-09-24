@@ -6,7 +6,7 @@ const DB_NAME = "the-other-side";
 const STORE = "portrait";
 const KEY = "me";
 
-let memory: Blob | null = null;
+let memory: Blob | null | undefined;
 
 function open(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -39,31 +39,35 @@ async function run<T>(
   }
 }
 
-export async function savePhoto(blob: Blob): Promise<void> {
+export async function savePhoto(blob: Blob): Promise<boolean> {
   memory = blob;
   try {
     await run("readwrite", (store) => store.put(blob, KEY));
+    return true;
   } catch {
-    /* page-only fallback */
+    return false;
   }
 }
 
 export async function loadPhoto(): Promise<Blob | null> {
+  if (memory !== undefined) return memory;
   try {
     const stored = await run<Blob | undefined>("readonly", (store) =>
       store.get(KEY),
     );
-    return stored ?? memory;
+    return stored ?? null;
   } catch {
-    return memory;
+    return null;
   }
 }
 
-export async function forgetPhoto(): Promise<void> {
+export async function forgetPhoto(): Promise<boolean> {
   memory = null;
   try {
     await run("readwrite", (store) => store.delete(KEY));
+    return true;
   } catch {
-    /* nothing stored */
+    // A failed transaction does not prove an older stored portrait was deleted.
+    return false;
   }
 }

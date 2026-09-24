@@ -10,3 +10,4 @@ __pycache__/
 local-data/
 # Local test photos and personal media. Never commit.
 private/
+pytest-of-*/
