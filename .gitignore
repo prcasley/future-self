@@ -8,3 +8,5 @@ __pycache__/
 *.db
 *.db-*
 local-data/
+# Local test photos and personal media. Never commit.
+private/

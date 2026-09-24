@@ -2,6 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { createBustGeometry } from "./hologram/bustGeometry";
 import { createHologramMaterial } from "./hologram/hologramShader";
+import {
+  AURA_LIGHT,
+  CROSSING_MS,
+  SIDE_LIGHT,
+  auraOf,
+  lerpLight,
+  type Light,
+} from "./sideLight";
 import "./Hologram.css";
 
 export type HologramMode = "idle" | "listening" | "thinking" | "speaking";
@@ -13,20 +21,9 @@ export interface HologramProps {
   mode?: HologramMode;
   /** The Crossing: which side ECHO is speaking from (null = home) */
   side?: string | null;
+  /** Voice-picked aura (cyan, violet, gold) for the home light */
+  aura?: string | null;
 }
-
-// Side light for the Crossing. Home keeps the original crystal palette (mix 0).
-const SIDE_LIGHT: Record<
-  string,
-  { tint: [number, number, number]; mix: number; gain: number }
-> = {
-  home: { tint: [0.2, 0.7, 1.0], mix: 0, gain: 1 },
-  dream: { tint: [1.0, 0.84, 0.5], mix: 0.6, gain: 1.1 },
-  good: { tint: [0.45, 0.8, 1.0], mix: 0.35, gain: 1.05 },
-  neutral: { tint: [0.62, 0.66, 0.74], mix: 0.65, gain: 0.8 },
-  bad: { tint: [0.85, 0.35, 0.55], mix: 0.6, gain: 0.8 },
-};
-const CROSSING_MS = 1600;
 
 const MODE_MAP: Record<HologramMode, number> = {
   idle: 0,
@@ -35,9 +32,11 @@ const MODE_MAP: Record<HologramMode, number> = {
   speaking: 3,
 };
 
-export function Hologram({ active, mode, side }: HologramProps) {
+export function Hologram({ active, mode, side, aura }: HologramProps) {
   const mount = useRef<HTMLDivElement>(null);
   const [webglFailed, setWebglFailed] = useState(false);
+  const auraRef = useRef(auraOf(aura));
+  auraRef.current = auraOf(aura);
 
   // The Crossing: remember where we came from so the light and scatter can transition.
   const sideKey = side && SIDE_LIGHT[side] ? side : "home";
@@ -130,8 +129,18 @@ export function Hologram({ active, mode, side }: HologramProps) {
 
     let frameId = 0;
     const startTime = performance.now();
+    // Home light eases toward the voice-picked aura instead of snapping.
+    let home: Light = AURA_LIGHT[auraRef.current];
+    let lastTime = startTime;
 
     const animate = (currentTime: number) => {
+      const dt = Math.min(0.1, Math.max(0, (currentTime - lastTime) / 1000));
+      lastTime = currentTime;
+      home = reducedMotion
+        ? AURA_LIGHT[auraRef.current]
+        : lerpLight(home, AURA_LIGHT[auraRef.current], 1 - Math.exp(-dt * 3));
+      const lightOf = (key: string) =>
+        key === "home" ? home : SIDE_LIGHT[key];
       const elapsed = (currentTime - startTime) / 1000;
 
       // 2-second materialization transition (0.0 to 1.0)
@@ -148,16 +157,10 @@ export function Hologram({ active, mode, side }: HologramProps) {
         1,
         Math.max(0, (currentTime - cross.start) / CROSSING_MS),
       );
-      const from = SIDE_LIGHT[cross.from];
-      const to = SIDE_LIGHT[cross.to];
-      const lerp = (a: number, b: number) => a + (b - a) * t;
-      material.uniforms.uTint.value.set(
-        lerp(from.tint[0], to.tint[0]),
-        lerp(from.tint[1], to.tint[1]),
-        lerp(from.tint[2], to.tint[2]),
-      );
-      material.uniforms.uTintMix.value = lerp(from.mix, to.mix);
-      material.uniforms.uGain.value = lerp(from.gain, to.gain);
+      const light = lerpLight(lightOf(cross.from), lightOf(cross.to), t);
+      material.uniforms.uTint.value.set(...light.tint);
+      material.uniforms.uTintMix.value = light.mix;
+      material.uniforms.uGain.value = light.gain;
       material.uniforms.uCross.value = reducedMotion
         ? 0
         : Math.sin(Math.PI * t);

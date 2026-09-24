@@ -1,0 +1,47 @@
+/* Portrait projection. Sizing comes from .hologram so both presences share one slot. */
+.portrait-avatar {
+  touch-action: pan-y;
+}
+
+.portrait-avatar canvas {
+  display: block;
+}
+
+.portrait-avatar .hologram-overlay-scanlines {
+  opacity: 0.18;
+}
+
+/* Without WebGL: the photo in a soft oval with the same scanlines. */
+.portrait-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.portrait-fallback-photo {
+  height: 86%;
+  max-width: 88%;
+  object-fit: cover;
+  -webkit-mask-image: radial-gradient(
+    ellipse 46% 50% at 50% 46%,
+    #000 62%,
+    transparent 100%
+  );
+  mask-image: radial-gradient(
+    ellipse 46% 50% at 50% 46%,
+    #000 62%,
+    transparent 100%
+  );
+  filter: saturate(0.88) contrast(1.04)
+    drop-shadow(0 0 18px rgba(115, 216, 255, 0.45));
+}
+
+.portrait-fallback-photo.aura-violet {
+  filter: saturate(0.88) contrast(1.04)
+    drop-shadow(0 0 18px rgba(189, 120, 255, 0.5));
+}
+
+.portrait-fallback-photo.aura-gold {
+  filter: saturate(0.88) contrast(1.04)
+    drop-shadow(0 0 18px rgba(255, 204, 107, 0.5));
+}

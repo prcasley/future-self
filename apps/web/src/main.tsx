@@ -1,9 +1,18 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { createRoot } from "react-dom/client";
 import { Hologram } from "./Hologram";
 import { LabPanel, OtherSidePanel, SIDE_LABELS } from "./Panels";
 import { turn, type EchoState } from "./api";
+import { PortraitAvatar } from "./avatar/PortraitAvatar";
+import { forgetPhoto, loadPhoto, savePhoto } from "./avatar/photoStore";
+import { normalizePhoto } from "./avatar/preparePortrait";
 import "./style.css";
+
+// Photo commands are handled here, in the browser, so the photo never reaches the server.
+const FORGET_PHOTO =
+  /\b(forget|delete|remove|erase|clear|wipe)\b.*\b(my|the) (photo|picture|selfie|face)\b/i;
+const USE_PHOTO =
+  /\b(use|add|upload|scan|put in)\b.*\bmy (own )?(photo|picture|selfie|face)\b|\blook like me\b/i;
 
 const empty: EchoState = {
   goals: {},
@@ -20,6 +29,7 @@ const empty: EchoState = {
     decisions: 0,
     last: null,
   },
+  appearance: { outfit: "casual", aura: "cyan" },
 };
 // ECHO's voice shifts with the side it speaks from.
 const VOICES: Record<string, { rate: number; pitch: number }> = {
@@ -44,6 +54,10 @@ function App() {
   const [ledger, setLedger] = useState<any[]>([]);
   const [configured, setConfigured] = useState(false);
   const [talking, setTalking] = useState(false);
+  const [portrait, setPortrait] = useState<string | null>(null);
+  const portraitRef = useRef<string | null>(null);
+  portraitRef.current = portrait;
+  const fileInput = useRef<HTMLInputElement>(null);
   const sideRef = useRef<string | null>(null);
   sideRef.current = state.side;
   const recognition = useRef<any>(null);
@@ -75,6 +89,50 @@ function App() {
         .then((r) => r.json())
         .then(setLedger);
   }, [state.panel, state.revision]);
+  // The photo is kept in this browser only; restore it on load.
+  useEffect(() => {
+    let alive = true;
+    loadPhoto()
+      .then((blob) => {
+        if (alive && blob) setPortrait(URL.createObjectURL(blob));
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+  useEffect(
+    () => () => {
+      if (portrait) URL.revokeObjectURL(portrait);
+    },
+    [portrait],
+  );
+  const choosePhoto = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      const blob = await normalizePhoto(file);
+      await savePhoto(blob);
+      setPortrait(URL.createObjectURL(blob));
+      setStatus(
+        "Your photo stays on this device. Say “forget my photo” to remove it.",
+      );
+    } catch {
+      setStatus("I couldn't read that photo. Try a JPG or PNG.");
+    }
+  };
+  /** Photo commands never go to the server: the photo lives only in this browser. */
+  const photoCommand = async (text: string): Promise<string | null> => {
+    if (FORGET_PHOTO.test(text)) {
+      await forgetPhoto();
+      setPortrait(null);
+      return "Done. Your photo is gone from this device, and I'm back to my own face.";
+    }
+    if (USE_PHOTO.test(text) && !portraitRef.current)
+      return "Tap Photo and choose a picture of yourself. It stays on this device.";
+    return null;
+  };
   const listen = () => {
     if (enabled.current && !speaking.current && !busy.current) {
       try {
@@ -122,13 +180,25 @@ function App() {
     controller.current?.abort();
     speechSynthesis.cancel();
     speaking.current = false;
-    const abort = new AbortController();
-    controller.current = abort;
     setHeard(text);
     setDid("");
+    const local = await photoCommand(text).catch(() => null);
+    if (local !== null) {
+      if (id !== generation.current) return;
+      busy.current = false;
+      setDid(
+        local.startsWith("Done") ? "Removed your photo from this device" : "",
+      );
+      speak(local);
+      return;
+    }
+    const abort = new AbortController();
+    controller.current = abort;
     setStatus("Thinking");
     let partial = "";
     let failed = false;
+    // An outfit only shows on the portrait; without a photo, say how to add one.
+    let hint = "";
     try {
       for await (const item of turn(session, text, abort.signal)) {
         if (id !== generation.current) return;
@@ -138,8 +208,15 @@ function App() {
         }
         if (item.event === "state") setState(item.data);
         if (item.event === "status") setStatus(item.data.text);
+        if (
+          item.event === "tool_call" &&
+          item.data.name === "set_appearance" &&
+          item.data.args?.outfit === "monarch" &&
+          !portraitRef.current
+        )
+          hint = " Tap Photo and I'll wear it as you.";
         if (item.event === "tool_result") setDid(item.data.text);
-        if (item.event === "sentence") speak(item.data.text);
+        if (item.event === "sentence") speak(item.data.text + hint);
         if (item.event === "error") speak(item.data.text);
       }
     } catch (error) {
@@ -273,6 +350,13 @@ function App() {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, []);
+  const presenceMode = !running
+    ? "idle"
+    : talking || speaking.current
+      ? "speaking"
+      : busy.current
+        ? "thinking"
+        : "listening";
   return (
     <main>
       <header>
@@ -307,6 +391,23 @@ function App() {
           >
             Permissions
           </button>
+          <button
+            aria-label={
+              portrait
+                ? "Change your photo. It stays on this device."
+                : "Add your photo. It stays on this device."
+            }
+            onClick={() => fileInput.current?.click()}
+          >
+            {portrait ? "Change photo" : "Photo"}
+          </button>
+          <input
+            ref={fileInput}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={(e) => void choosePhoto(e)}
+          />
         </div>
       </header>
       <section className="intro">
@@ -327,28 +428,39 @@ function App() {
                 ? "SESSION ACTIVE"
                 : "ECHO · STANDING BY"}
           </div>
-          <Hologram
-            active={running}
-            side={state.side}
-            mode={
-              !running
-                ? "idle"
-                : talking || speaking.current
-                  ? "speaking"
-                  : busy.current
-                    ? "thinking"
-                    : "listening"
-            }
-          />
+          {portrait ? (
+            <PortraitAvatar
+              active={running}
+              side={state.side}
+              portraitUrl={portrait}
+              appearance={state.appearance}
+              mode={presenceMode}
+              onPrepared={(ok) => {
+                if (!ok)
+                  setStatus("I couldn't read that photo. Try a JPG or PNG.");
+              }}
+            />
+          ) : (
+            <Hologram
+              active={running}
+              side={state.side}
+              aura={state.appearance?.aura}
+              mode={presenceMode}
+            />
+          )}
           <div className={"orbit" + (state.side ? " " + state.side : "")} />
           <div className="presence-footer">
             {state.side
               ? "ONE POSSIBLE FUTURE · 52 WEEKS OUT"
               : "ONE POSSIBLE FUTURE"}
             <span>
-              {state.side
-                ? "ORIGINAL DIGITAL PERSONA · SCENARIO, NOT PREDICTION"
-                : "ORIGINAL DIGITAL PERSONA · NOT YOUR LIKENESS"}
+              {portrait
+                ? state.side
+                  ? "PORTRAIT PROJECTION OF YOUR PHOTO · SCENARIO, NOT PREDICTION"
+                  : "PORTRAIT PROJECTION OF YOUR PHOTO · STAYS ON THIS DEVICE"
+                : state.side
+                  ? "ORIGINAL DIGITAL PERSONA · SCENARIO, NOT PREDICTION"
+                  : "ORIGINAL DIGITAL PERSONA · NOT YOUR LIKENESS"}
             </span>
           </div>
         </section>
@@ -373,7 +485,9 @@ function App() {
               <h2>A visible footprint.</h2>
               <p>
                 Prompts go to Nebius. Browser recognition may process audio with
-                its provider. This prototype stores goals on this computer.
+                its provider. This prototype stores goals on this computer. Your
+                photo never leaves this browser; say “forget my photo” to delete
+                it.
               </p>
               {ledger.slice(0, 5).map((x) => (
                 <div className="card" key={x.id}>
@@ -441,6 +555,7 @@ function App() {
               four, forty minutes, done.”
             </p>
             <p>“That was too much.” · “Come back.” · “Undo that.”</p>
+            <p>“Put on the monarch armor.” · “Make my aura gold.”</p>
           </div>
         </aside>
       </div>

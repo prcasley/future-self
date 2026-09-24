@@ -37,3 +37,9 @@ The `state` event now carries `side`, `futures` (per-side summary: final, bands,
 | `GET /lab/{session}/export` | Anonymized JSONL (check-ins, features, decisions, rewards) |
 
 After a `cross` tool result the stream emits `status` “Crossing…” and the spoken `sentence` is ECHO speaking from that side.
+
+## Portrait projection — v0.3
+
+New tool: `set_appearance(outfit?, aura?)`. `outfit` is `casual` or `monarch`; `aura` is `cyan`, `violet`, or `gold`. At least one is required. It is undoable, and a repeat of the current look answers “That's already the look.” Spoken shortcuts handled without the model: “put on the monarch armor”, “suit up”, “take off the armor”, “go back to casual”, and any phrase with “aura” plus a colour (gold/golden/yellow, violet/purple, cyan/blue/teal). A look change expires a pending confirmation, like any new topic.
+
+The `state` event now carries `appearance: {outfit, aura}`. The user's photo is **not** part of the API: the browser keeps it in IndexedDB, and the browser answers “forget my photo” / “use my face” itself without sending a turn.

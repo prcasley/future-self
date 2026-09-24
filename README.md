@@ -10,7 +10,7 @@ Speak with ECHO, a personalized future-self hologram. Set goals, create daily mi
 
 ## Status
 
-The local prototype is runnable: browser speech input and output, streamed Nebius replies, persistent goals and explicit memories, spoken confirmation, undo, a procedural Three.js human hologram, **the Crossing** (four simulated sides you can talk to) and **the Lab** (the push / maintain / reduce research instrument). The hologram is an original stylized persona with idle/listening/thinking/speaking states, per-side light during a crossing, reduced-motion support and responsive framing. It is not a scanned likeness or phoneme lip-sync. The Lab is a research prototype: it needs real longitudinal data before anyone can claim it improves decisions. It is not yet the complete hackathon application.
+The local prototype is runnable: browser speech input and output, streamed Nebius replies, persistent goals and explicit memories, spoken confirmation, undo, a procedural Three.js human hologram, **the Crossing** (four simulated sides you can talk to) and **the Lab** (the push / maintain / reduce research instrument). The hologram is an original stylized persona with idle/listening/thinking/speaking states, per-side light during a crossing, reduced-motion support and responsive framing. Tap **Photo** and ECHO becomes a **portrait projection of you**, with a wardrobe you change by voice. Neither is a scanned likeness or phoneme lip-sync. The Lab is a research prototype: it needs real longitudinal data before anyone can claim it improves decisions. It is not yet the complete hackathon application.
 
 ## The Crossing
 
@@ -28,6 +28,10 @@ Dynamics: progress has diminishing returns and momentum; strain rises with hours
 ## The Lab
 
 A research instrument inside the app. **Question:** can an agent infer when to push, maintain, or reduce goal intensity from longitudinal behavioral signals, better than a constant policy, without raising strain? Say “turn on the lab” (spoken consent required), then check in daily by voice: “slept six, energy three, stress four, forty minutes, done.” ECHO answers with tomorrow's call and its reasons. Three policies decide every day — a transparent capacity **rule**, a contextual **bandit** (Thompson sampling over capacity buckets), and the **model** (Nemotron, shadow only) — one is applied, all are logged. The next check-in scores yesterday's call; you can also say “too much”, “just right”, or “too little”. The Lab panel shows the decision, its evidence, a per-policy scorecard, and the same three policies run in the simulator. `GET /lab/{session}/export` returns anonymized JSONL with no goal text or facts. Design, hypotheses and limitations: [docs/LAB.md](docs/LAB.md).
+
+## Your likeness: the portrait projection
+
+Tap **Photo** and choose a picture of yourself. The browser finds your face, frames it, cuts a soft head-and-shoulders matte, and ECHO appears as a lit 2.5D hologram of you, with parallax, rim light, a reveal, and the same slice dissolve when you cross sides. Change the look like a character creator, by voice only: “put on the monarch armor”, “suit up”, “take off the armor”, “make my aura gold” (cyan, violet, or gold). Every armor piece, halo, and beam is drawn procedurally; there are no downloaded or game assets. **The photo never leaves your browser.** It is kept in IndexedDB, it is never sent to the API or the model, and “forget my photo” deletes it. Details, props, and limitations: [apps/web/src/avatar/AVATAR-RESULT.md](apps/web/src/avatar/AVATAR-RESULT.md).
 
 ## Planned stack
 
@@ -86,7 +90,7 @@ Initial single-call observations: Super 4,531ms and Nano 486ms. With thinking di
 
 Browser recognition → transcript → FastAPI → SQLite context → Nebius Super stream → validated tool → committed state → captions and browser speech.
 
-This is a **single-user loopback-only development service**. Session IDs are not authentication. SQLite is stored in ignored `local-data/echo.db`; localStorage retains a browser session ID. Prompts and selected context go to Nebius. Browser recognition may process audio remotely; that traffic is outside the backend ledger. No analytics or remote font requests are included.
+This is a **single-user loopback-only development service**. Session IDs are not authentication. SQLite is stored in ignored `local-data/echo.db`; localStorage retains a browser session ID. Prompts and selected context go to Nebius. Browser recognition may process audio remotely; that traffic is outside the backend ledger. No analytics are included. The one remote request is the Google Fonts stylesheet. A photo chosen with **Photo** is processed and stored only in the browser (IndexedDB) and never reaches the backend; the server keeps only the outfit and aura names.
 
 Forgetting removes an explicit fact from active recall and clears recent context and undo snapshots after confirmation. It is not secure disk erasure or deletion of provider records. Account-wide wipe/export, multi-device identity and authenticated deployment remain planned.
 
@@ -102,11 +106,11 @@ cd apps/web
 npm run build
 ```
 
-Twenty offline backend tests (voice foundation, the Crossing, the Lab) and the frontend production build pass. The live synthetic goal/correction/confirmation/undo sequence passes. The page was inspected on desktop and at 400px. Physical microphone capture, speech audibility, recognition accuracy and end-to-end latency have not been verified.
+Thirty-five offline backend tests (voice foundation, the Crossing, the Lab, the wardrobe), seven web unit tests (`node --experimental-strip-types --test tests/*.test.mjs`: stream client and portrait framing/matte) and the frontend production build pass. The live synthetic goal/correction/confirmation/undo sequence passes. The page was inspected on desktop and at 400px. Physical microphone capture, speech audibility, recognition accuracy and end-to-end latency have not been verified.
 
 ## Next milestones
 
-Real voice fixtures; Silero VAD and automatic barge-in; sentence-chunk playback; normalized SQLModel/FTS5 memory and Nano summaries; missions generated from goals and adapted by Lab decisions; sandbox-backed sides with real image IDs; portrait generation; inbox; privacy export/wipe; authenticated deployment and guided demo.
+Real voice fixtures; Silero VAD and automatic barge-in; sentence-chunk playback; normalized SQLModel/FTS5 memory and Nano summaries; missions generated from goals and adapted by Lab decisions; sandbox-backed sides with real image IDs; segmentation-grade cutout and a face-landmark mesh for the portrait; inbox; privacy export/wipe; authenticated deployment and guided demo.
 
 See [DECISIONS.md](DECISIONS.md), [Claude plan handoff](docs/PLAN.md), [API contract](docs/API.md), [Lab research design](docs/LAB.md), and [prioritized contest checklist](docs/CONTEST-READINESS.md).
 

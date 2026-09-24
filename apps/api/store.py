@@ -4,8 +4,8 @@ import json
 import sqlite3
 from pathlib import Path
 
+from . import avatar, otherside
 from . import lab as labmod
-from . import otherside
 
 PANELS = ("goals", "memory", "privacy", "otherside", "lab")
 
@@ -42,11 +42,14 @@ class Store:
             "side": None,
             "futures": {},
             "lab": labmod.new_lab(),
+            "appearance": dict(avatar.DEFAULT),
         }
         for key, value in defaults.items():
             state.setdefault(key, value)
         for key, value in labmod.new_lab().items():
             state["lab"].setdefault(key, value)
+        for key, value in avatar.DEFAULT.items():
+            state["appearance"].setdefault(key, value)
         return state
 
     def save(self, session, state):
@@ -68,6 +71,7 @@ class Store:
 def public(state):
     """Compact state for the client and the model context. Never the week-by-week detail."""
     out = {key: state[key] for key in ("goals", "facts", "panel", "pending", "revision", "side")}
+    out["appearance"] = dict(state["appearance"])
     out["futures"] = {
         side: {
             "label": f["label"],
@@ -94,7 +98,7 @@ def public(state):
 
 
 def snapshot(state):
-    return {key: json.loads(json.dumps(state[key])) for key in ("goals", "facts", "side")}
+    return {key: json.loads(json.dumps(state[key])) for key in ("goals", "facts", "side", "appearance")}
 
 
 def act(state, name, args, confirmed=False):
@@ -128,6 +132,19 @@ def act(state, name, args, confirmed=False):
         return "Back on this side. Today is where the curve bends."
     if name == "log_checkin":
         return log_checkin(state, args)
+    if name == "set_appearance":
+        look, error = avatar.normalize(args)
+        if error:
+            return error
+        before = dict(state["appearance"])
+        after = {**before, **look}
+        if after == before:
+            return "That's already the look."
+        state["undo"].append(snapshot(state))
+        state["undo"] = state["undo"][-30:]
+        state["appearance"] = after
+        state["revision"] += 1
+        return avatar.describe(before, after)
     if name == "rate_intensity":
         try:
             last = labmod.rate_last(

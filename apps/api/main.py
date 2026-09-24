@@ -11,8 +11,8 @@ from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from . import avatar, otherside
 from . import lab as labmod
-from . import otherside
 from .store import PANELS, Store, act, public
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -110,6 +110,16 @@ TOOLS = [
         ["yes"],
     ),
     tool("wipe_lab", "Erase all Lab check-ins and decisions, after confirmation.", {}, []),
+    tool(
+        "set_appearance",
+        "Change the look of the user's portrait projection, like a character creator: outfit "
+        "(casual, or monarch armor) and aura colour (cyan, violet, gold). Only when the user asks.",
+        {
+            "outfit": {"type": "string", "enum": list(avatar.OUTFITS)},
+            "aura": {"type": "string", "enum": list(avatar.AURAS)},
+        },
+        [],
+    ),
 ]
 PERSONA = """You are ECHO, a supportive possible future self, not a prediction or a medical professional. This app is The Other Side.
 Speak in 1-3 short sentences. Ask one clear question at a time. No markdown.
@@ -122,6 +132,7 @@ Example: user says "change my career goal to learning Python" -> call set_goal(d
 When the user wants to see a future, the other side, a dream or good or neutral or bad life, or what happens if they drift or commit, call cross with that side.
 When the user speaks a daily check-in with numbers (sleep, energy, stress, minutes, done or not), call log_checkin with digits. If the Lab is off, call set_lab_consent(yes) first only if they ask to turn it on.
 When the user says a call was too much, just right, or too little, call rate_intensity.
+When the user wants to change how they look (armor, outfit, aura colour), call set_appearance. Their photo never reaches you; if they ask to use their own face, tell them to tap Photo, and that it stays on their device.
 Do not add sensitive inferred facts. Remember only explicit requests. Never say an action is complete before its tool result.
 """
 SIDE_CONTEXT = """You are currently speaking AS the user's future self on "{label}", fifty-two weeks into a simulation built from their own goals. It is a scenario, not a prediction; say so if asked. Ground everything in these numbers and nothing else: {numbers}. Stay in first person, warm and honest, no shame, no medical claims. If the user asks to come back, call return_home."""
@@ -397,6 +408,10 @@ async def text_turn(turn: Turn):
                         "rate_intensity",
                         {"rating": normalized.replace("that was ", "").replace(" ", "_")},
                     )
+                elif (look := avatar.parse(normalized)) is not None:
+                    # A look change is a new topic: it expires any pending confirmation.
+                    state["pending"] = None
+                    action, args = "set_appearance", look
                 else:
                     # A new topic expires a pending action; the LLM cannot authorize confirmation.
                     state["pending"] = None

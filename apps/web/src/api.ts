@@ -65,6 +65,8 @@ export type EchoState = {
   side: string | null;
   futures: Record<string, Future>;
   lab: LabState;
+  /** Voice-picked wardrobe for the portrait projection. The photo itself never leaves the browser. */
+  appearance: { outfit: string; aura: string };
 };
 export async function getJSON<T>(path: string): Promise<T> {
   const response = await fetch("/api" + path);
