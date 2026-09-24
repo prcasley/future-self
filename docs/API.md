@@ -43,3 +43,22 @@ After a `cross` tool result the stream emits `status` “Crossing…” and the 
 New tool: `set_appearance(outfit?, aura?)`. `outfit` is `casual` or `monarch`; `aura` is `cyan`, `violet`, or `gold`. At least one is required. It is undoable, and a repeat of the current look answers “That's already the look.” Spoken shortcuts handled without the model: “put on the monarch armor”, “suit up”, “take off the armor”, “go back to casual”, and any phrase with “aura” plus a colour (gold/golden/yellow, violet/purple, cyan/blue/teal). A look change expires a pending confirmation, like any new topic.
 
 The `state` event now carries `appearance: {outfit, aura}`. The user's photo is **not** part of the API: the browser keeps it in IndexedDB, and the browser answers “forget my photo” / “use my face” itself without sending a turn.
+
+## Golden ratio face scan — v0.4
+
+`POST /scan/projection`: JSON `{session_id: UUID, ratios: {key: number}, side?: string}`. Extra fields are refused with 422, so an image, pixels or landmarks cannot be sent. `ratios` takes 1 to 7 of `faceRectangle`, `thirdsUpper`, `thirdsLower`, `lips`, `mouthNose`, `jawMouth`, `widthIpd`, each a finite number from 0.2 to 5; anything else is a 400. `side` is `dream`, `good`, `neutral` or `bad`; when it is absent or invalid, the session's current side is used, and if there is none, “your current path”.
+
+Response:
+
+```json
+{
+  "side": "good",
+  "weeks": 52,
+  "rows": [{"key": "faceRectangle", "now": 1.52, "future": 1.539, "chance": 70, "note": "steady drift toward Φ"}],
+  "runner": "nemotron",
+  "model": "nvidia/nemotron-3-super-120b-a12b",
+  "disclaimer": "Illustrative projection, for fun. Not a measurement of worth, beauty or health, and not a prediction."
+}
+```
+
+With a key set, one Super call writes the rows and is logged in the ledger. The server keeps every `future` within 8% of `now`, clamps `chance` to 5–97, replaces notes that are too long or mention appearance, health or age, and fills missing rows locally. Without a key, or if the call fails or streams bad JSON, `runner` is `local` and the rows come from a deterministic projection with the same shape. Nothing is stored.

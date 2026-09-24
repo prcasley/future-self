@@ -52,6 +52,9 @@ uniform float uTintMix;
 uniform float uSpeak;
 uniform vec3 uTint;
 uniform vec3 uAura;
+uniform sampler2D uMesh;    // face-mesh wireframe (white on transparent), same view as uMap
+uniform float uMeshAmount;
+uniform float uDuo;         // 1 = scan look (luminance through the aura colour), 0 = natural colour
 varying vec2 vUv;
 varying float vRelief;
 
@@ -67,13 +70,19 @@ void main() {
 
   vec3 c = tex.rgb;
   float l = dot(c, vec3(0.299, 0.587, 0.114));
-  // Keep skin detail: slight chroma pull, shadows lifted into the aura colour.
+  // Natural grade keeps skin detail: slight chroma pull, shadows lifted into the aura colour.
   vec3 g = mix(vec3(l), c, 0.88);
   g += uAura * 0.08 * (1.0 - l);
+  // Scan look: the photo's own luminance mapped through the aura colour, so every detail stays.
+  float k = smoothstep(0.03, 0.97, l);
+  vec3 duo = mix(uAura * 0.05, uAura * 0.64, smoothstep(0.0, 0.55, k));
+  duo = mix(duo, mix(uAura, vec3(1.0), 0.72), smoothstep(0.5, 1.0, k));
+  g = mix(g, duo, uDuo);
   g = mix(g, g * (0.5 + uTint), uTintMix * 0.32);
 
   float flicker = 0.985 + 0.015 * hash(vec2(floor(uTime * 12.0), 1.0)) * motion;
-  float scan = 0.94 + 0.06 * sin(gl_FragCoord.y * 1.35 + uTime * 1.6 * motion);
+  float depth = mix(0.06, 0.13, uDuo);
+  float scan = 1.0 - depth + depth * sin(gl_FragCoord.y * 1.35 + uTime * 1.6 * motion);
   float speed = uMode > 2.5 ? 0.16 : (thinking > 0.5 ? 0.42 : (uMode > 0.5 ? 0.14 : 0.09));
   float sweepY = fract(uTime * speed);
   float band = (1.0 - smoothstep(0.0, 0.03, abs((1.0 - vUv.y) - sweepY))) * motion;
@@ -82,6 +91,8 @@ void main() {
 
   vec3 col = g * scan * flicker * uGain * (1.0 + 0.08 * uSpeak);
   col += uAura * (edge * 0.55 + band * 0.18 + 0.05 * uSpeak * vRelief);
+  float wire = texture2D(uMesh, uv).a * uMeshAmount;
+  col += mix(uAura, vec3(1.0), 0.35) * wire * (0.75 + 0.25 * band);
 
   // Reveal: bottom-up, with a bright leading line.
   float rev = uMaterialize * 1.12 - 0.04;
@@ -156,11 +167,24 @@ export function createPortraitMaterial(
       uSpeak: { value: 0 },
       uTint: { value: new THREE.Vector3(0.2, 0.7, 1.0) },
       uAura: { value: new THREE.Vector3(0.45, 0.85, 1.0) },
+      uMesh: { value: blankTexture() },
+      uMeshAmount: { value: 0 },
+      uDuo: { value: 1 },
     },
     transparent: true,
     depthWrite: false,
     depthTest: false,
   });
+}
+
+let blank: THREE.DataTexture | null = null;
+/** 1x1 transparent texture for an empty mesh layer. */
+export function blankTexture(): THREE.DataTexture {
+  if (!blank) {
+    blank = new THREE.DataTexture(new Uint8Array([0, 0, 0, 0]), 1, 1);
+    blank.needsUpdate = true;
+  }
+  return blank;
 }
 
 export function createPartMaterial(

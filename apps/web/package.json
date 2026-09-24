@@ -8,6 +8,8 @@
     "build": "tsc --noEmit && vite build"
   },
   "dependencies": {
+    "@mediapipe/face_mesh": "0.4.1633559619",
+    "@mediapipe/selfie_segmentation": "0.1.1675465747",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "three": "^0.180.0"

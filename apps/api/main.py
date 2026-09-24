@@ -8,10 +8,10 @@ from uuid import UUID
 import httpx
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import Response, StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from . import avatar, otherside
+from . import avatar, otherside, scan
 from . import lab as labmod
 from .store import PANELS, Store, act, public
 
@@ -30,13 +30,22 @@ class Settings(BaseSettings):
 
 settings = Settings()
 store = Store(settings.database)
-app = FastAPI(title="The Other Side", version="0.2.0")
+app = FastAPI(title="The Other Side", version="0.4.0")
 locks = defaultdict(asyncio.Lock)
 
 
 class Turn(BaseModel):
     session_id: UUID
     text: str = Field(min_length=1, max_length=4000)
+
+
+class Projection(BaseModel):
+    """Ratio numbers from the on-device face scan. Extra fields (an image, pixels) are refused."""
+
+    model_config = ConfigDict(extra="forbid")
+    session_id: UUID
+    ratios: dict[str, float]
+    side: str | None = Field(default=None, max_length=12)
 
 
 def tool(name, description, properties, required):
@@ -354,6 +363,43 @@ def lab_export(session_id: UUID):
         media_type="application/x-ndjson",
         headers={"Content-Disposition": "attachment; filename=the-other-side-lab.jsonl"},
     )
+
+
+@app.post("/scan/projection")
+async def scan_projection(body: Projection):
+    """Future card for the golden-ratio scan: Nemotron on Token Factory, local fallback. Numbers only."""
+    try:
+        ratios = scan.validate(body.ratios)
+    except ValueError as error:
+        raise HTTPException(400, str(error)) from None
+    state = store.load(str(body.session_id))
+    side = scan.side_of(body.side) or scan.side_of(state.get("side"))
+    rows, runner = None, "local"
+    if settings.nebius_api_key:
+        try:
+            result = await model_turn(
+                state,
+                "",
+                messages=scan.messages(ratios, side),
+                tools=None,
+                max_tokens=500,
+                temperature=0.8,
+            )
+            rows = scan.parse(result.get("content") or "", ratios, side)
+        except (RuntimeError, ValueError):  # provider down, or a malformed stream
+            rows = None
+        if rows:
+            runner = "nemotron"
+    if not rows:
+        rows = scan.local(ratios, side)
+    return {
+        "side": side,
+        "weeks": scan.WEEKS,
+        "rows": rows,
+        "runner": runner,
+        "model": settings.nebius_super_model if runner == "nemotron" else None,
+        "disclaimer": scan.DISCLAIMER,
+    }
 
 
 @app.get("/tts")

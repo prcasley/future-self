@@ -33,7 +33,7 @@ Without `portraitUrl` it shows a neutral bust. Without WebGL it falls back to th
 ## Files
 
 - `portraitFrame.ts`: pure pixel logic, unit-tested in Node. It holds the skin-chroma face finder with a hair check (light hair passes the chroma test, so the region is re-measured on its brighter pixels), face-anchored framing, the bust shapes, and the matte (bust shape, background keyed only in the head's outer ring and the body's rim, feathered at the photo's edges, blurred).
-- `preparePortrait.ts`: canvas glue that decodes the photo, finds the face at 128 px, cuts the matte at 160×200, and composites the 640×800 RGBA texture. It also downscales a chosen file to a 1280 px JPEG before it is stored.
+- `preparePortrait.ts`: canvas glue. It takes the shared on-device analysis (`../scan/analyze.ts`: MediaPipe face landmarks and person mask), frames on the landmarks, cuts the matte from the mask, draws the face-mesh wireframe, and composites the 640×800 RGBA texture. Without the engine it falls back to the heuristic: the face found at 128 px and the matte cut at 160×200. It also downscales a chosen file to a 1280 px JPEG before it is stored.
 - `photoStore.ts`: IndexedDB in this browser only. If storage is unavailable, the photo lasts for the page.
 - `portraitShader.ts`: the portrait shader (dome-and-nose depth prior on a 96×120 plane) and the shared part shader (equip reveal, aura colouring, bottom fade).
 - `PortraitAvatar.tsx` / `.css`: the scene, the layered parts, the motes, pointer parallax, wall-clock equip/reveal, reduced motion, and full disposal.
@@ -55,6 +55,7 @@ The photo never reaches the API, the model, or the ledger. Photo commands ("forg
 
 ## Limitations and next
 
-- The face finder is a heuristic. Beige walls sit near the skin boundary, and busy backgrounds can leave a little wall inside the head ring. Pick a photo with a plain background and the face well lit. Next upgrade: an in-browser segmentation model with the model file bundled locally.
-- The depth is a prior, not a reconstruction. Next: a face-landmark mesh for real head turns and jaw motion.
+- **Update, September 24:** the on-device face engine (MediaPipe Face Mesh and Selfie Segmentation, served locally) now does framing and cutout, and the portrait carries a blue scan duotone with the face mesh on it. The heuristic below is the fallback. See [../scan/FACE-SCAN.md](../scan/FACE-SCAN.md).
+- The heuristic face finder: beige walls sit near the skin boundary, and busy backgrounds can leave a little wall inside the head ring.
+- The depth is a prior, not a reconstruction. Next: use the landmarks for real head turns and jaw motion.
 - Not yet tuned on Prat's own photo, because it only exists on his computer. That tuning pass belongs to Antigravity locally, after merge.

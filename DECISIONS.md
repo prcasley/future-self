@@ -41,3 +41,13 @@ The first live correction test exposed a model asking for confirmation without s
 - No ML dependency for v1. Face finding is a skin-chroma heuristic with a hair check; the matte keys the photo's own background only in the head's outer ring and the body's rim, so the face core is never keyed out. A bundled segmentation model is the next step if the heuristic misses on real photos.
 - Parts are procedural canvas drawings (original shapes, the chosen violet/gold palette, no provider logos, no game assets), one plane per part at its own depth so parallax separates them. Outfit and aura are separate slots so more pieces can be added the same way.
 - Codex's point bust stays the default whenever no photo is set, and it takes the aura colour too.
+
+## Golden ratio face scan — September 24, 2026 (Claude, from Prat's brief to Codex)
+
+- Prat asked for an engine that turns any photo into the blue hologram-scan look of his reference picture, and an animated pop-up that maps the golden ratio on the user's face with labeled callouts, ending with how their features could change in the future. He set the framing: the future part is **a marketing gimmick**, and it must run on the Nebius agent. It is built exactly that way, and the screen labels it illustrative every time.
+- On-device engine: MediaPipe Face Mesh (478 landmarks with irises) and Selfie Segmentation, the official Apache-2.0 packages, pinned, served by this app from `/mediapipe/` (a Vite plugin in dev, copied into `dist/` on build). There is no CDN, so the photo and the page never talk to a third party. The heuristic face finder and matte stay as the fallback.
+- One analysis per photo, shared: the portrait projection now frames on landmarks and cuts out with the person mask. This fixes the background artifacts Codex found in review, and draws the mesh on the hologram.
+- Measurements are real: centimetres use the iris (about 11.7 mm) as the ruler, and ratios are shown as `calculated / Φ target`. There are no beauty scores, match percentages or rankings.
+- The future goes through Nemotron on Token Factory, but the server owns the numbers. Only seven ratios are sent (the request model forbids extra fields). Changes are clamped to 8%, notes are filtered, and a deterministic local projection fills gaps and runs offline. The side of the Crossing steers the drift, so the scan belongs to the same story as the four futures.
+- The gold outline morph is solved from the projected ratios (re-measuring it returns them), so the picture never disagrees with the numbers.
+- Layout: landscape with callouts beside the face on desktop; on phones, numbered badges plus a readable list, because side callouts cannot fit legibly in 360 px. Text is white on dark, per Prat's readability preference.

@@ -1,10 +1,16 @@
 // Browser glue for the portrait: decode the local photo, frame it on the face, cut the matte.
-// Everything happens in canvases on this device; nothing is uploaded.
+// With the on-device face engine, framing comes from face landmarks and the matte from the
+// person mask (a clean head-and-shoulders cutout); without it, the heuristic face finder and
+// matte stand in. Everything happens in canvases on this device; nothing is uploaded.
 
+import { analyzePhoto, decode } from "../scan/analyze";
+import { meshEdges, type Landmark } from "../scan/faceEngine";
 import {
   computeMatte,
+  faceFromLandmarks,
   findFace,
   frameFor,
+  inPhoto,
   VIEW,
   type Crop,
   type Face,
@@ -17,9 +23,16 @@ const MATTE = { width: 160, height: 200 };
 
 export type Prepared = {
   canvas: HTMLCanvasElement;
+  /** Face-mesh wireframe in the same view, white on transparent; null without landmarks. */
+  mesh: HTMLCanvasElement | null;
   face: Face | null;
   crop: Crop;
+  /** Landmarks in view coordinates (0..1 across the portrait), when the engine found a face. */
+  landmarks: Landmark[] | null;
+  engine: "mediapipe" | "heuristic";
 };
+
+type Drawable = HTMLImageElement | HTMLCanvasElement;
 
 function canvas(width: number, height: number) {
   const c = document.createElement("canvas");
@@ -28,25 +41,21 @@ function canvas(width: number, height: number) {
   return c;
 }
 
-export async function decode(url: string): Promise<HTMLImageElement> {
-  const img = new Image();
-  img.decoding = "async";
-  img.src = url;
-  await img.decode();
-  if (!img.naturalWidth || !img.naturalHeight) throw new Error("empty image");
-  return img;
+function sizeOf(source: Drawable): [number, number] {
+  return source instanceof HTMLImageElement
+    ? [source.naturalWidth, source.naturalHeight]
+    : [source.width, source.height];
 }
 
 /** Draw the crop of the source into a target canvas, leaving outside-the-photo pixels transparent. */
-function drawCrop(
+export function drawCrop(
   ctx: CanvasRenderingContext2D,
-  img: HTMLImageElement,
+  source: Drawable,
   crop: Crop,
   width: number,
   height: number,
 ) {
-  const iw = img.naturalWidth;
-  const ih = img.naturalHeight;
+  const [iw, ih] = sizeOf(source);
   const sx0 = Math.max(0, crop.x * iw);
   const sy0 = Math.max(0, crop.y * ih);
   const sx1 = Math.min(iw, (crop.x + crop.w) * iw);
@@ -57,7 +66,7 @@ function drawCrop(
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(
-    img,
+    source,
     sx0,
     sy0,
     sx1 - sx0,
@@ -69,8 +78,35 @@ function drawCrop(
   );
 }
 
-export async function preparePortrait(url: string): Promise<Prepared> {
-  const img = await decode(url);
+/** Landmarks of the source photo mapped into view coordinates for a crop. */
+export function toView(landmarks: Landmark[], crop: Crop): Landmark[] {
+  return landmarks.map((p) => ({
+    x: (p.x - crop.x) / crop.w,
+    y: (p.y - crop.y) / crop.h,
+    z: p.z,
+  }));
+}
+
+/** Alpha canvas from per-pixel values at matte resolution. */
+function alphaCanvas(values: (u: number, v: number, i: number) => number) {
+  const m = canvas(MATTE.width, MATTE.height);
+  const ctx = m.getContext("2d")!;
+  const data = ctx.createImageData(m.width, m.height);
+  for (let y = 0; y < m.height; y++)
+    for (let x = 0; x < m.width; x++) {
+      const i = y * m.width + x;
+      data.data[i * 4] = 255;
+      data.data[i * 4 + 1] = 255;
+      data.data[i * 4 + 2] = 255;
+      data.data[i * 4 + 3] = Math.round(
+        255 * values((x + 0.5) / m.width, (y + 0.5) / m.height, i),
+      );
+    }
+  ctx.putImageData(data, 0, 0);
+  return m;
+}
+
+function heuristicFace(img: HTMLImageElement): Face | null {
   const scale = ANALYSIS / Math.max(img.naturalWidth, img.naturalHeight);
   const a = canvas(
     Math.max(8, Math.round(img.naturalWidth * scale)),
@@ -78,31 +114,76 @@ export async function preparePortrait(url: string): Promise<Prepared> {
   );
   const actx = a.getContext("2d", { willReadFrequently: true })!;
   actx.drawImage(img, 0, 0, a.width, a.height);
-  const face = findFace(actx.getImageData(0, 0, a.width, a.height));
-  const crop = frameFor(face, img.naturalWidth, img.naturalHeight);
+  return findFace(actx.getImageData(0, 0, a.width, a.height));
+}
 
-  const m = canvas(MATTE.width, MATTE.height);
-  const mctx = m.getContext("2d", { willReadFrequently: true })!;
-  drawCrop(mctx, img, crop, m.width, m.height);
-  const alpha = computeMatte(mctx.getImageData(0, 0, m.width, m.height), crop);
-  const matte = mctx.createImageData(m.width, m.height);
-  for (let i = 0; i < alpha.length; i++) {
-    matte.data[i * 4] = 255;
-    matte.data[i * 4 + 1] = 255;
-    matte.data[i * 4 + 2] = 255;
-    matte.data[i * 4 + 3] = Math.round(alpha[i] * 255);
+function drawMesh(view: Landmark[], width: number, height: number) {
+  const edges = meshEdges();
+  if (!edges.length) return null;
+  const out = canvas(width, height);
+  const ctx = out.getContext("2d")!;
+  ctx.strokeStyle = "rgba(255,255,255,0.5)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (const [a, b] of edges) {
+    ctx.moveTo(view[a].x * width, view[a].y * height);
+    ctx.lineTo(view[b].x * width, view[b].y * height);
   }
-  mctx.clearRect(0, 0, m.width, m.height);
-  mctx.putImageData(matte, 0, 0);
+  ctx.stroke();
+  return out;
+}
+
+export async function preparePortrait(url: string): Promise<Prepared> {
+  const { image: img, landmarks, mask, engine } = await analyzePhoto(url);
+  const W = img.naturalWidth;
+  const H = img.naturalHeight;
+  const face = landmarks
+    ? faceFromLandmarks(landmarks, W, H)
+    : heuristicFace(img);
+  const crop = frameFor(face, W, H);
+
+  let matte: HTMLCanvasElement;
+  if (mask) {
+    // Person mask cropped into the view, feathered where the photo itself ends.
+    matte = canvas(PORTRAIT_SIZE.width, PORTRAIT_SIZE.height);
+    const mctx = matte.getContext("2d")!;
+    drawCrop(mctx, mask, crop, matte.width, matte.height);
+    mctx.globalCompositeOperation = "destination-in";
+    mctx.drawImage(
+      alphaCanvas((u, v) => inPhoto(u, v, crop)),
+      0,
+      0,
+      matte.width,
+      matte.height,
+    );
+  } else {
+    const m = canvas(MATTE.width, MATTE.height);
+    const mctx = m.getContext("2d", { willReadFrequently: true })!;
+    drawCrop(mctx, img, crop, m.width, m.height);
+    const alpha = computeMatte(
+      mctx.getImageData(0, 0, m.width, m.height),
+      crop,
+    );
+    matte = alphaCanvas((_u, _v, i) => alpha[i]);
+  }
 
   const out = canvas(PORTRAIT_SIZE.width, PORTRAIT_SIZE.height);
   const octx = out.getContext("2d")!;
   drawCrop(octx, img, crop, out.width, out.height);
   octx.globalCompositeOperation = "destination-in";
   octx.imageSmoothingEnabled = true;
-  octx.drawImage(m, 0, 0, out.width, out.height);
+  octx.drawImage(matte, 0, 0, out.width, out.height);
   octx.globalCompositeOperation = "source-over";
-  return { canvas: out, face, crop };
+
+  const view = landmarks ? toView(landmarks, crop) : null;
+  return {
+    canvas: out,
+    mesh: view ? drawMesh(view, out.width, out.height) : null,
+    face,
+    crop,
+    landmarks: view,
+    engine,
+  };
 }
 
 export function neutralPortrait(): HTMLCanvasElement {
@@ -139,4 +220,4 @@ export async function normalizePhoto(
   }
 }
 
-export { VIEW };
+export { decode, VIEW };

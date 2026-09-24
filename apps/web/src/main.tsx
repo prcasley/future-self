@@ -6,6 +6,7 @@ import { turn, type EchoState } from "./api";
 import { PortraitAvatar } from "./avatar/PortraitAvatar";
 import { forgetPhoto, loadPhoto, savePhoto } from "./avatar/photoStore";
 import { normalizePhoto } from "./avatar/preparePortrait";
+import { FaceScan } from "./scan/FaceScan";
 import "./style.css";
 
 // Photo commands are handled here, in the browser, so the photo never reaches the server.
@@ -13,6 +14,10 @@ const FORGET_PHOTO =
   /\b(forget|delete|remove|erase|clear|wipe)\b.*\b(my|the) (photo|picture|selfie|face)\b/i;
 const USE_PHOTO =
   /\b(use|add|upload|scan|put in)\b.*\bmy (own )?(photo|picture|selfie|face)\b|\blook like me\b/i;
+const SCAN =
+  /\b(scan (my )?face|face scan|scan me|golden ratio|phi scan|map my face)\b/i;
+const CLOSE_SCAN =
+  /^\s*(close( it| the scan)?|done|that's enough|exit|hide (it|the scan))\s*[.!]?\s*$/i;
 
 const empty: EchoState = {
   goals: {},
@@ -58,6 +63,11 @@ function App() {
   const portraitRef = useRef<string | null>(null);
   portraitRef.current = portrait;
   const fileInput = useRef<HTMLInputElement>(null);
+  // The golden-ratio face scan: pops up after a photo is chosen, replays on "scan my face".
+  const [scanOpen, setScanOpen] = useState(false);
+  const [scanReplay, setScanReplay] = useState(0);
+  const scanOpenRef = useRef(false);
+  scanOpenRef.current = scanOpen;
   const sideRef = useRef<string | null>(null);
   sideRef.current = state.side;
   const recognition = useRef<any>(null);
@@ -115,8 +125,12 @@ function App() {
       const blob = await normalizePhoto(file);
       const persisted = await savePhoto(blob);
       setPortrait(URL.createObjectURL(blob));
+      setScanReplay((k) => k + 1);
+      setScanOpen(true);
       if (!persisted) {
-        setStatus("Photo ready for this visit. Browser storage is unavailable, so it may not survive a reload.");
+        setStatus(
+          "Photo ready for this visit. Browser storage is unavailable, so it may not survive a reload.",
+        );
         return;
       }
       setStatus(
@@ -130,10 +144,22 @@ function App() {
   const photoCommand = async (text: string): Promise<string | null> => {
     if (FORGET_PHOTO.test(text)) {
       const removed = await forgetPhoto();
+      setScanOpen(false);
       setPortrait(null);
       if (!removed)
         return "I've hidden your photo for this visit, but couldn't confirm deletion from browser storage. Please clear this site's data in browser settings to remove any saved copy.";
       return "Done. Your photo is gone from this device, and I'm back to my own face.";
+    }
+    if (SCAN.test(text)) {
+      if (!portraitRef.current)
+        return "Tap Photo first, then say scan my face. Your photo stays on this device.";
+      setScanReplay((k) => k + 1);
+      setScanOpen(true);
+      return "Scanning. Here is your golden ratio map, measured on this device.";
+    }
+    if (scanOpenRef.current && CLOSE_SCAN.test(text)) {
+      setScanOpen(false);
+      return "Closed the scan.";
     }
     if (USE_PHOTO.test(text) && !portraitRef.current)
       return "Tap Photo and choose a picture of yourself. It stays on this device.";
@@ -499,7 +525,8 @@ function App() {
                 Prompts go to Nebius. Browser recognition may process audio with
                 its provider. This prototype stores goals on this computer. Your
                 photo never leaves this browser; say “forget my photo” to delete
-                it.
+                it. The face scan measures on this device and sends Nebius only
+                the ratio numbers for its future projection.
               </p>
               {ledger.slice(0, 5).map((x) => (
                 <div className="card" key={x.id}>
@@ -568,6 +595,7 @@ function App() {
             </p>
             <p>“That was too much.” · “Come back.” · “Undo that.”</p>
             <p>“Put on the monarch armor.” · “Make my aura gold.”</p>
+            <p>“Scan my face.” · “Close.”</p>
           </div>
         </aside>
       </div>
@@ -583,6 +611,15 @@ function App() {
         </div>
         {did && <div className="action">DID · {did}</div>}
       </section>
+      <FaceScan
+        open={scanOpen}
+        photoUrl={portrait}
+        session={session}
+        side={state.side}
+        aura={state.appearance?.aura}
+        replay={scanReplay}
+        onClose={() => setScanOpen(false)}
+      />
       <footer>
         <span>VOICE ONLY. ALWAYS YOUR CHOICE.</span>
         <span>

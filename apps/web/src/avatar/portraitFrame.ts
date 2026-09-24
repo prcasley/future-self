@@ -246,6 +246,22 @@ export function findFace(img: Pixels): Face | null {
   return best.face;
 }
 
+/**
+ * Face box from face-mesh landmarks (normalized to the photo), in the same convention as
+ * findFace: cx on the facial midline, width cheek to cheek, cy = forehead top + 0.62 × width.
+ */
+export function faceFromLandmarks(
+  landmarks: { x: number; y: number }[],
+  width: number,
+  height: number,
+): Face {
+  const at = (i: number) => landmarks[i];
+  const w = Math.abs(at(454).x - at(234).x);
+  const cx = (at(168).x + at(1).x + at(152).x) / 3;
+  const cy = (at(10).y * height + 0.62 * w * width) / height;
+  return { cx, cy, w, h: Math.abs(at(152).y - at(10).y), score: 1 };
+}
+
 /** Source crop that puts the face at VIEW.faceX/faceY with VIEW.faceWidth. Falls back to a centred selfie. */
 export function frameFor(
   face: Face | null,

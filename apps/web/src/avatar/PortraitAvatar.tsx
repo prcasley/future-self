@@ -9,7 +9,11 @@ import {
   lerpLight,
   type Aura,
 } from "../sideLight";
-import { createPartMaterial, createPortraitMaterial } from "./portraitShader";
+import {
+  blankTexture,
+  createPartMaterial,
+  createPortraitMaterial,
+} from "./portraitShader";
 import {
   OUTFIT_PARTS,
   PARTS,
@@ -87,7 +91,10 @@ export function PortraitAvatar({
 }: PortraitAvatarProps) {
   const mount = useRef<HTMLDivElement>(null);
   const api = useRef<{
-    setPortrait: (source: HTMLCanvasElement | null) => void;
+    setPortrait: (
+      source: HTMLCanvasElement | null,
+      mesh?: HTMLCanvasElement | null,
+    ) => void;
   } | null>(null);
   const [webglFailed, setWebglFailed] = useState(false);
   const currentMode: HologramMode = mode || (active ? "listening" : "idle");
@@ -182,6 +189,7 @@ export function PortraitAvatar({
     // The portrait: a displaced plane, so the face has depth when the rig sways.
     const neutral = own(new THREE.CanvasTexture(neutralPortrait()));
     let photo: THREE.CanvasTexture | null = null;
+    let wire: THREE.CanvasTexture | null = null;
     const portraitMaterial = own(createPortraitMaterial(neutral));
     const portrait = new THREE.Mesh(
       own(new THREE.PlaneGeometry(1.6, 2.0, 96, 120)),
@@ -191,11 +199,15 @@ export function PortraitAvatar({
     rig.add(portrait);
     let revealStart = performance.now();
     api.current = {
-      setPortrait(source) {
+      setPortrait(source, mesh) {
         const next = source ? new THREE.CanvasTexture(source) : null;
+        const nextWire = mesh ? new THREE.CanvasTexture(mesh) : null;
         photo?.dispose();
+        wire?.dispose();
         photo = next;
+        wire = nextWire;
         portraitMaterial.uniforms.uMap.value = next ?? neutral;
+        portraitMaterial.uniforms.uMesh.value = nextWire ?? blankTexture();
         revealStart = performance.now();
         for (const name of EQUIPPABLE)
           equip[name] = { value: 0, from: 0, goal: 0, start: -Infinity };
@@ -338,6 +350,10 @@ export function PortraitAvatar({
       u.uTint.value.set(...light.tint);
       u.uSpeak.value = speak;
       u.uAura.value.copy(auraColour);
+      const wireIn = clamp01((now - revealStart - REVEAL_MS * 0.6) / 900);
+      u.uMeshAmount.value =
+        wireIn *
+        (m === "thinking" && !reduced ? 0.55 + 0.35 * Math.sin(t * 6) : 0.6);
 
       const wearing = OUTFIT_PARTS[outfitRef.current];
       const revealed = u.uMaterialize.value > 0.55;
@@ -439,6 +455,7 @@ export function PortraitAvatar({
       host.removeEventListener("pointerleave", onLeave);
       api.current = null;
       photo?.dispose();
+      wire?.dispose();
       for (const x of owned) x.dispose();
       renderer.dispose();
       if (host.contains(renderer.domElement))
@@ -456,7 +473,7 @@ export function PortraitAvatar({
     preparePortrait(portraitUrl)
       .then((prepared) => {
         if (cancelled) return;
-        api.current?.setPortrait(prepared.canvas);
+        api.current?.setPortrait(prepared.canvas, prepared.mesh);
         preparedRef.current?.(true);
       })
       .catch(() => {

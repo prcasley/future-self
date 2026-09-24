@@ -68,6 +68,34 @@ export type EchoState = {
   /** Voice-picked wardrobe for the portrait projection. The photo itself never leaves the browser. */
   appearance: { outfit: string; aura: string };
 };
+export type ScanProjection = {
+  side: string | null;
+  weeks: number;
+  rows: {
+    key: string;
+    now: number;
+    future: number;
+    chance: number;
+    note: string;
+  }[];
+  runner: "nemotron" | "local";
+  model: string | null;
+  disclaimer: string;
+};
+/** Future card for the face scan. Sends ratio numbers only; the photo never leaves the browser. */
+export async function projectScan(
+  session_id: string,
+  ratios: Record<string, number>,
+  side: string | null,
+): Promise<ScanProjection> {
+  const response = await fetch("/api/scan/projection", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ session_id, ratios, side }),
+  });
+  if (!response.ok) throw new Error("Projection failed");
+  return (await response.json()) as ScanProjection;
+}
 export async function getJSON<T>(path: string): Promise<T> {
   const response = await fetch("/api" + path);
   if (!response.ok) throw new Error("Request failed");

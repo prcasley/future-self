@@ -68,3 +68,7 @@ Codex's priority #1 is done on branch `feat/the-other-side-integrated`: the Cros
 ## Portrait update — September 23 (Claude)
 
 Codex's likeness handoff to Antigravity is built on the same branch: tap **Photo**, and ECHO becomes a portrait projection of the user, with a voice-driven wardrobe (casual/monarch armor, cyan/violet/gold aura). The photo stays on-device. This moves P2 *Personalized portrait* (consented photo, original assets, graceful no-photo path) and part of P1 *Better hologram* forward. Offline evidence only: 35 backend tests, 7 web tests, build, and headless captures with a public-domain stand-in photo. It is not tuned on Prat's photo yet, which never left his computer. The table above is unchanged and remains the guide.
+
+## Face scan update — September 24 (Claude)
+
+Prat's golden-ratio face scan is built on the same branch. An on-device MediaPipe engine turns any photo into the hologram scan, maps Φ proportions with labeled callouts, and ends with a future projection written by Nemotron on Token Factory, which is the Nebius tie-in; Prat framed it as a marketing gimmick. The same engine gives the portrait a clean cutout. Offline evidence only: 49 backend tests, 21 web tests, build, and headless captures with the public-domain stand-in photo. Not yet tried on Prat's own photo.
