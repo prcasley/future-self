@@ -102,6 +102,32 @@ def snapshot(state):
 
 
 def act(state, name, args, confirmed=False):
+    if name == "recap":
+        state["panel"] = "memory"
+        goals = [f"Your {domain} goal is {goal}." for domain, goal in state["goals"].items()]
+        facts = [f"You asked me to remember: {fact}." for fact in state["facts"]]
+        return " ".join(goals + facts) or "Nothing saved yet. What is one goal you'd like to work toward?"
+    if name == "correct_memory":
+        old, new = args.get("fact"), args.get("replacement")
+        if not isinstance(old, str) or not isinstance(new, str) or not new.strip():
+            return "A correction needs the existing fact and its replacement."
+        new = new.strip()
+        if old not in state["facts"]:
+            return "I could not find that exact memory. Nothing changed."
+        if old == new:
+            return "That memory is already up to date."
+        if not confirmed:
+            state["pending"] = {"name": name, "args": {"fact": old, "replacement": new}}
+            return f"Replace the saved memory '{old}' with '{new}'? Say yes or no."
+        state["facts"] = list(dict.fromkeys(new if fact == old else fact for fact in state["facts"]))
+        state["pending"] = None
+        # Stale statements must not come back through conversation, undo or generated narratives.
+        state["history"] = []
+        state["undo"] = []
+        state["futures"] = {}
+        state["side"] = None
+        state["revision"] += 1
+        return "Corrected that memory and cleared the old conversation context."
     if name == "show":
         if args.get("panel") not in PANELS:
             return "That panel is not available yet."
@@ -214,6 +240,8 @@ def act(state, name, args, confirmed=False):
         # Forget must also remove the fact from future model context and undo frames.
         state["history"] = []
         state["undo"] = []
+        state["futures"] = {}
+        state["side"] = None
         result = "Forgot that memory and cleared the conversation context."
     state["revision"] += 1
     return result

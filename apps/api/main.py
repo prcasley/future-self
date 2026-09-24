@@ -76,6 +76,13 @@ TOOLS = [
     tool("remember", "Remember a fact the user explicitly asks you to keep.", {"fact": STRING}, ["fact"]),
     tool("forget", "Forget an exact existing fact, after confirmation.", {"fact": STRING}, ["fact"]),
     tool(
+        "correct_memory",
+        "Replace a saved fact when the user explicitly corrects it. Use the exact existing fact. Server asks for confirmation.",
+        {"fact": STRING, "replacement": STRING},
+        ["fact", "replacement"],
+    ),
+    tool("recap", "Read back saved goals and explicit memories.", {}, []),
+    tool(
         "show",
         "Switch the visible panel.",
         {"panel": {"type": "string", "enum": list(PANELS)}},
@@ -438,6 +445,9 @@ async def text_turn(turn: Turn):
             try:
                 if normalized in ("undo", "undo that", "undo last change"):
                     action, args = "undo", {}
+                elif normalized in ("recap", "give me a recap", "what do you remember", "what do you remember about me"):
+                    state["pending"] = None
+                    action, args = "recap", {}
                 elif normalized in ("yes", "yes please", "confirm", "no", "cancel", "no thanks"):
                     action, args = "confirm", {"yes": normalized in ("yes", "yes please", "confirm")}
                 elif normalized in ("come back", "return", "return home", "bring me back", "that's enough"):
@@ -512,7 +522,7 @@ async def text_turn(turn: Turn):
                     if action == "log_checkin" and state["lab"]["decisions"]:
                         await llm_policy(state)
                 # Don't reintroduce forgotten content into model history.
-                if action == "confirm" and answer.startswith("Forgot"):
+                if action == "confirm" and answer.startswith(("Forgot", "Corrected")):
                     state["history"] = []
                 else:
                     state["history"] += [
