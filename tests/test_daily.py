@@ -103,3 +103,13 @@ def test_poll_is_session_scoped_and_idempotent(tmp_path, monkeypatch):
         assert len(first["daily"]["messages"]) == 1
         assert first == second
         assert client.post(f"/daily/{uuid4()}/poll").json()["daily"]["messages"] == []
+
+
+def test_spoken_goal_drops_the_leading_to_and_reads_naturally():
+    assert daily.shortcut("My goal is to learn Python.") == (
+        "set_goal",
+        {"domain": "personal", "goal": "learn Python"},
+    )
+    assert daily.shortcut("my goal is run a 10k") == ("set_goal", {"domain": "personal", "goal": "run a 10k"})
+    item = {"goal": "learn Python", "minutes": 15, "done": False, "steps": [{"minutes": 15, "text": "Code"}]}
+    assert daily.describe(item).startswith("Here's a 15-minute mission for your goal, learn Python.")

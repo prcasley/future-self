@@ -61,9 +61,12 @@ def describe(item):
     if not item:
         return "What is one goal you want to work toward? Say: my goal is, followed by your goal."
     if item["done"]:
-        return f"You marked your {item['minutes']}-minute mission for {item['goal']} complete."
+        return f"You marked your {item['minutes']}-minute mission for your goal, {item['goal']}, complete."
     steps = " ".join(f"{step['minutes']} minutes: {step['text']}." for step in item["steps"])
-    return f"Your mission for {item['goal']} is {item['minutes']} minutes. {steps} This is a suggestion; you can stop or adjust. Say mission complete when you're done."
+    return (
+        f"Here's a {item['minutes']}-minute mission for your goal, {item['goal']}. {steps} "
+        "This is a suggestion; you can stop or adjust. Say mission complete when you're done."
+    )
 
 
 def schedule(state, clock, now=None):
@@ -122,7 +125,8 @@ def shortcut(text):
     }
     if low in commands:
         return commands[low], {}
-    match = re.fullmatch(r"my goal is (.+)", normalized, re.I)
+    # "My goal is to learn Python" saves "learn Python", which reads naturally when spoken back.
+    match = re.fullmatch(r"my goal is (?:to )?(.+)", normalized, re.I)
     if match:
         return "set_goal", {"domain": "personal", "goal": match[1]}
     match = re.fullmatch(
