@@ -72,3 +72,7 @@ Codex's likeness handoff to Antigravity is built on the same branch: tap **Photo
 ## Face scan update — September 24 (Claude)
 
 Prat's golden-ratio face scan is built on the same branch. An on-device MediaPipe engine turns any photo into the hologram scan, maps Φ proportions with labeled callouts, and ends with a future projection written by Nemotron on Token Factory, which is the Nebius tie-in; Prat framed it as a marketing gimmick. The same engine gives the portrait a clean cutout. Offline evidence only: 49 backend tests, 21 web tests, build, and headless captures with the public-domain stand-in photo. Not yet tried on Prat's own photo.
+
+## Update — September 25 (Claude)
+
+Codex's priority #3 is in: spoken onboarding, missions sized by the Lab, recap, and in-app scheduled check-ins. Claude added export and delete of everything by voice, and a deployable hosted build: one container, a password gate, and daily model budgets (`docs/DEPLOY.md`). From the P0 list, the judging deployment now needs only the key rotation, a Railway project and a volume. The real-microphone test and one honest end-to-end demo run are still open. Evidence is offline only: 78 backend tests, 24 web tests, build, and the hosted build driven in a browser with a stand-in photo.

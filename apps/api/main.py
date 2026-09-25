@@ -40,12 +40,43 @@ class Settings(BaseSettings):
     nebius_nano_model: str = "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B"
     nebius_project_id: str = ""
     database: str = str(ROOT / "local-data" / "echo.db")
+    # Hosted demo (apps/api/serve.py). Local development leaves all of these at their defaults.
+    demo_user: str = "judge"
+    demo_password: str = ""
+    demo_open: bool = False
+    web_dist: str = str(ROOT / "apps" / "web" / "dist")
+    model_daily_cap: int = 0  # model calls per UTC day across everyone; 0 = unlimited
+    session_daily_cap: int = 0  # model-backed turns per session per UTC day; 0 = unlimited
 
 
 settings = Settings()
 store = Store(settings.database)
-app = FastAPI(title="The Other Side", version="0.4.0")
+app = FastAPI(title="The Other Side", version="0.5.0")
 locks = defaultdict(asyncio.Lock)
+session_turns = defaultdict(lambda: ["", 0])  # session -> [UTC date, model-backed turns]
+BUDGET_MESSAGE = (
+    "This demo has used today's AI budget, so I can't talk freely until tomorrow. Built-in commands "
+    "still work, like “what is my mission”, “recap”, “scan my face” and “export my data”."
+)
+
+
+def over_budget():
+    return bool(settings.model_daily_cap) and store.calls_today() >= settings.model_daily_cap
+
+
+def allow_model(session):
+    """Spend one model-backed turn for this session, or say no when a hosted-demo budget is used up."""
+    if over_budget():
+        return False
+    if settings.session_daily_cap:
+        today = time.strftime("%Y-%m-%d", time.gmtime())
+        entry = session_turns[session]
+        if entry[0] != today:
+            entry[:] = [today, 0]
+        if entry[1] >= settings.session_daily_cap:
+            return False
+        entry[1] += 1
+    return True
 
 
 class Turn(BaseModel):
@@ -238,6 +269,8 @@ async def model_turn(state, text, tokens=None, messages=None, tools=TOOLS, max_t
         payload["tools"] = tools
     if not settings.nebius_api_key:
         raise RuntimeError("missing_key")
+    if over_budget():
+        raise RuntimeError("daily_budget")
     for attempt in range(2):
         started = time.monotonic()
         status = "error"
@@ -366,7 +399,12 @@ def health():
         "audio": "browser_asr",
         "model": settings.nebius_super_model,
         "sandboxes": bool(settings.nebius_project_id),
-        "scope": "local-single-user",
+        "scope": "hosted-demo" if settings.demo_password else "local-single-user",
+        "budget": {
+            "model_daily_cap": settings.model_daily_cap,
+            "session_daily_cap": settings.session_daily_cap,
+            "used_today": store.calls_today(),
+        },
     }
 
 
@@ -452,7 +490,7 @@ async def scan_projection(body: Projection):
     state = store.load(str(body.session_id))
     side = scan.side_of(body.side) or scan.side_of(state.get("side"))
     rows, runner = None, "local"
-    if settings.nebius_api_key:
+    if settings.nebius_api_key and allow_model(str(body.session_id)):
         try:
             result = await model_turn(
                 state,
@@ -554,6 +592,9 @@ async def text_turn(turn: Turn):
                     # A look change is a new topic: it expires any pending confirmation.
                     state["pending"] = None
                     action, args = "set_appearance", look
+                elif not allow_model(session):
+                    state["pending"] = None
+                    answer = BUDGET_MESSAGE
                 else:
                     # A new topic expires a pending action; the LLM cannot authorize confirmation.
                     state["pending"] = None

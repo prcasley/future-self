@@ -10,7 +10,7 @@ Speak with ECHO, a personalized future-self hologram. Set goals, create daily mi
 
 ## Status
 
-The local prototype is runnable: browser speech input and output, streamed Nebius replies, persistent goals and explicit memories, spoken confirmation, undo, a procedural Three.js human hologram, **the Crossing** (four simulated sides you can talk to) and **the Lab** (the push / maintain / reduce research instrument). The hologram is an original stylized persona with idle/listening/thinking/speaking states, per-side light during a crossing, reduced-motion support and responsive framing. Tap **Photo** and ECHO becomes a **portrait projection of you**, with a wardrobe you change by voice, and a **golden-ratio face scan** maps your proportions and projects them 52 weeks forward. Neither is a 3D reconstruction or phoneme lip-sync. The Lab is a research prototype: it needs real longitudinal data before anyone can claim it improves decisions. It is not yet the complete hackathon application.
+The local prototype is runnable: browser speech input and output, streamed Nebius replies, persistent goals and explicit memories, spoken confirmation, undo, a procedural Three.js human hologram, **the Crossing** (four simulated sides you can talk to) and **the Lab** (the push / maintain / reduce research instrument). The hologram is an original stylized persona with idle/listening/thinking/speaking states, per-side light during a crossing, reduced-motion support and responsive framing. Tap **Photo** and ECHO becomes a **portrait projection of you**, with a wardrobe you change by voice, and a **golden-ratio face scan** maps your proportions and projects them 52 weeks forward. Neither is a 3D reconstruction or phoneme lip-sync. Since September 24 it also opens each session by voice (a first-goal prompt or your mission recap), sizes a daily mission from the Lab, keeps in-app daily check-ins, corrects memories, and lets you export or delete everything by voice ([daily experience](docs/DAILY-EXPERIENCE.md)). A password-protected hosted build is ready to deploy ([hosted demo](docs/DEPLOY.md)). The Lab is a research prototype: it needs real longitudinal data before anyone can claim it improves decisions.
 
 ## The Crossing
 
@@ -36,6 +36,10 @@ Tap **Photo** and choose a picture of yourself. An on-device face engine (MediaP
 ## The golden ratio face scan
 
 Right after you choose a photo, or when you say “scan my face”, a scan overlay pops up. A scan line turns your photo into a hologram, the 478-point face mesh draws in, and a golden spiral and the face's Φ rectangle appear. Then “GOLDEN RATIO (Φ) FACIAL MAPPING” lays out twelve labeled callouts, with real measurements in centimetres (the iris is the ruler) and seven proportions against Φ. Finally the **future projection** arrives: NVIDIA Nemotron on Nebius Token Factory projects each proportion 52 weeks out on your current side of the Crossing, with a chance for each, and a gold outline of your face morphs toward the projected shape. It is a marketing flourish and says so on screen. Only the seven ratio numbers go to the API, which refuses images, bounds every change to 8%, filters the notes, and falls back to a local projection offline. Say “close” to dismiss it. Details: [apps/web/src/scan/FACE-SCAN.md](apps/web/src/scan/FACE-SCAN.md).
+
+## Hosted demo
+
+`Dockerfile` and `railway.toml` build one container. It serves the web app, the face engine's model files and the API (under `/api`) from a single HTTPS origin, behind a demo password, with daily model budgets so judges can't drain the Nebius credits. The health check stays open for the platform. Step-by-step Railway setup, the variables, and the judge checklist are in [docs/DEPLOY.md](docs/DEPLOY.md).
 
 ## Planned stack
 
@@ -110,11 +114,11 @@ cd apps/web
 npm run build
 ```
 
-Forty-nine offline backend tests (voice foundation, the Crossing, the Lab, the wardrobe, the face-scan projection), twenty-one web unit tests (`node --experimental-strip-types --test tests/*.test.mjs`: stream client, portrait framing/matte, golden-ratio measurement, scan layout, the projected face) and the frontend production build pass. The live synthetic goal/correction/confirmation/undo sequence passes. The page was inspected on desktop and at 400px. Physical microphone capture, speech audibility, recognition accuracy and end-to-end latency have not been verified.
+Seventy-eight offline backend tests (voice foundation, the Crossing, the Lab, the wardrobe, the face-scan projection, memory corrections, the daily experience, export and delete, the hosted demo's password gate and budgets), twenty-four web unit tests (`node --experimental-strip-types --test tests/*.test.mjs`: stream client, portrait framing/matte, photo storage, golden-ratio measurement, scan layout, the projected face) and the frontend production build pass. The hosted build was reproduced stage by stage and driven in a browser: gate, one-origin page and face engine, a streamed voice turn, export, and delete. The live synthetic goal/correction/confirmation/undo sequence passes. The page was inspected on desktop and at 400px. Physical microphone capture, speech audibility, recognition accuracy and end-to-end latency have not been verified.
 
 ## Next milestones
 
-Real voice fixtures; Silero VAD and automatic barge-in; sentence-chunk playback; normalized SQLModel/FTS5 memory and Nano summaries; missions generated from goals and adapted by Lab decisions; sandbox-backed sides with real image IDs; landmark-driven head turns and jaw motion for the portrait; inbox; privacy export/wipe; authenticated deployment and guided demo.
+The first real deploy (docs/DEPLOY.md), after the key rotation; a microphone test on real hardware; real voice fixtures; Silero VAD and automatic barge-in; sentence-chunk playback; Tavily research receipts on missions; sandbox-backed sides with real image IDs; landmark-driven head turns and jaw motion for the portrait; a guided demo path for judges.
 
 See [DECISIONS.md](DECISIONS.md), [Claude plan handoff](docs/PLAN.md), [API contract](docs/API.md), [Lab research design](docs/LAB.md), and [prioritized contest checklist](docs/CONTEST-READINESS.md).
 

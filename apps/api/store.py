@@ -56,6 +56,11 @@ class Store:
                 (model, size, latency, status),
             )
 
+    def calls_today(self):
+        """Model calls logged since midnight UTC, for the hosted demo's daily budget."""
+        with self.connect() as db:
+            return db.execute("SELECT count(*) FROM ledger WHERE ts >= date('now')").fetchone()[0]
+
     def ledger(self):
         with self.connect() as db:
             return [dict(x) for x in db.execute("SELECT * FROM ledger ORDER BY id DESC LIMIT 30")]

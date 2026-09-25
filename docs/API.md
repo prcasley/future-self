@@ -70,3 +70,7 @@ With a key set, one Super call writes the rows and is logged in the ledger. The 
 New tools: `export_data()` and `wipe_all_data()`. Spoken shortcuts handled without the model: “export my data”, “download my data”, “give me a copy of my data”; “delete all my data”, “delete everything”, “forget everything about me”, “delete my account”. Narrower requests (“wipe the lab”, “delete all my goals”, “forget my photo”) keep their own paths.
 
 `export_data` changes nothing; the browser starts the download when it sees the `tool_call`. `wipe_all_data` always stages a spoken confirmation, whether the shortcut or the model asked for it. On “yes”, the server deletes the session's row (the model-call ledger holds no session data), and the turn's `state` event carries `wiped: true` once, so the browser deletes the photo from IndexedDB. A new topic expires the pending wipe.
+
+## Hosted demo — v0.5
+
+In the hosted build (`apps/api/serve.py`), every route above lives under `/api` on the same origin as the page, the same shape the Vite proxy gives in development. Everything except `GET /api/health` needs the demo password (HTTP Basic). `GET /health` now also reports `scope` (`hosted-demo` when a password is set) and `budget: {model_daily_cap, session_daily_cap, used_today}`. When a budget is used up, a turn that would need the model answers with a fixed message instead of calling it; deterministic shortcuts are unaffected. See `docs/DEPLOY.md`.
