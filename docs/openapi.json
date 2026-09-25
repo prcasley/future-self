@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "The Other Side",
-    "version": "0.4.0"
+    "version": "0.5.0"
   },
   "paths": {
     "/health": {
@@ -69,6 +69,44 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/daily/{session_id}/poll": {
+      "post": {
+        "summary": "Daily Poll",
+        "operationId": "daily_poll_daily__session_id__poll_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
               }
             }
           }
@@ -176,6 +214,45 @@
               "type": "string",
               "default": "good",
               "title": "Side"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/export/{session_id}": {
+      "get": {
+        "summary": "Export All",
+        "description": "The user's own copy of everything stored for the session. The photo never reaches the server.",
+        "operationId": "export_all_export__session_id__get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
             }
           }
         ],
@@ -449,6 +526,18 @@
             "maxLength": 4000,
             "minLength": 1,
             "title": "Text"
+          },
+          "timezone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timezone"
           }
         },
         "type": "object",

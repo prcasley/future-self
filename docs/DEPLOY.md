@@ -28,8 +28,8 @@ The password is HTTP Basic, so the browser shows its own sign-in box once and th
 | `NEBIUS_API_KEY` | the rotated Token Factory key |
 | `DEMO_PASSWORD` | a long random password for the judges |
 | `DEMO_USER` | optional; defaults to `judge` |
-| `MODEL_DAILY_CAP` | model calls per UTC day across everyone; the image defaults to 1500 |
-| `SESSION_DAILY_CAP` | model-backed turns per session per day; the image defaults to 150 |
+| `MODEL_DAILY_CAP` | model calls per UTC day across everyone; the image defaults to 1500, and `0` turns the cap off |
+| `SESSION_DAILY_CAP` | model-backed turns per session per day; the image defaults to 150, and `0` turns the cap off |
 | `NEBIUS_PROJECT_ID` | only once the sandbox runner exists |
 
 5. Settings → Networking → Generate Domain. Open `https://<domain>/api/health`; `"scope": "hosted-demo"` means the password gate is on.
@@ -45,6 +45,8 @@ docker run -p 8080:8080 -e NEBIUS_API_KEY=... -e DEMO_PASSWORD=... -v the-other-
 ## Budgets
 
 Every model call is written to the ledger. Once the ledger shows `MODEL_DAILY_CAP` calls for the day, the model is not called again until midnight UTC. Separately, each session gets `SESSION_DAILY_CAP` model-backed turns per day, counted in memory, so a restart resets that count. Over budget, ECHO says so plainly. The built-in commands keep working without the model: a first goal, missions, recap, reminders, outfits and auras, the scan with its local projection, and export and delete. Free conversation, crossing to a side, and Lab check-ins need the model and wait for the next day. If a budget runs out in the middle of a turn, the Crossing narration and the scan projection fall back to their local versions. Local runs have no caps.
+
+The rules ask that judges can use the project without restriction until judging ends on December 15 at 12:00 PM PT. For December 1–15, raise `MODEL_DAILY_CAP` as far as the balance allows, and check the ledger count in `/api/health` once a day.
 
 ## Judge checklist (Chrome or Edge)
 
