@@ -51,3 +51,8 @@ The first live correction test exposed a model asking for confirmation without s
 - The future goes through Nemotron on Token Factory, but the server owns the numbers. Only seven ratios are sent (the request model forbids extra fields). Changes are clamped to 8%, notes are filtered, and a deterministic local projection fills gaps and runs offline. The side of the Crossing steers the drift, so the scan belongs to the same story as the four futures.
 - The gold outline morph is solved from the projected ratios (re-measuring it returns them), so the picture never disagrees with the numbers.
 - Layout: landscape with callouts beside the face on desktop; on phones, numbered badges plus a readable list, because side callouts cannot fit legibly in 360 px. Text is white on dark, per Prat's readability preference.
+
+## Export, wipe, and the hosted demo — September 25, 2026 (Claude, while Codex was out of credits)
+
+- Codex finished its priority #3 on September 24: spoken onboarding, daily missions sized by the Lab, recap, memory corrections, and in-app scheduled check-ins. Claude reviewed both commits, re-ran every check (58 backend, 24 web, build), and formatted them with Ruff and Prettier. The formatting-only change is a separate commit.
+- Whole-account privacy by voice: “export my data” downloads the full stored state as JSON; “delete all my data” deletes the session row after a spoken yes, and the browser deletes the photo. The model may propose a wipe, but only the user's spoken yes executes it, the same rule as every destructive tool. Lab-only wipes keep their own path.

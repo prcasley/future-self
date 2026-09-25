@@ -2,6 +2,7 @@
 
 import json
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 
 from . import avatar, daily, otherside
@@ -31,22 +32,7 @@ class Store:
         with self.connect() as db:
             row = db.execute("SELECT data FROM state WHERE id=?", (session,)).fetchone()
         state = json.loads(row[0]) if row else {}
-        defaults = {
-            "goals": {},
-            "facts": [],
-            "history": [],
-            "undo": [],
-            "pending": None,
-            "panel": "goals",
-            "revision": 0,
-            "side": None,
-            "futures": {},
-            "lab": labmod.new_lab(),
-            "appearance": dict(avatar.DEFAULT),
-            "timezone": "UTC",
-            "daily": {"mission": None, "schedule": None, "messages": []},
-        }
-        for key, value in defaults.items():
+        for key, value in fresh_state().items():
             state.setdefault(key, value)
         for key, value in labmod.new_lab().items():
             state["lab"].setdefault(key, value)
@@ -58,6 +44,11 @@ class Store:
         with self.connect() as db:
             db.execute("INSERT OR REPLACE INTO state VALUES (?,?)", (session, json.dumps(state)))
 
+    def delete(self, session):
+        """Remove everything stored for a session. The model-call ledger holds no session data."""
+        with self.connect() as db:
+            db.execute("DELETE FROM state WHERE id=?", (session,))
+
     def log(self, model, size, latency, status):
         with self.connect() as db:
             db.execute(
@@ -68,6 +59,41 @@ class Store:
     def ledger(self):
         with self.connect() as db:
             return [dict(x) for x in db.execute("SELECT * FROM ledger ORDER BY id DESC LIMIT 30")]
+
+
+def fresh_state():
+    """What a brand-new session holds. Also what a session holds after "delete all my data"."""
+    return {
+        "goals": {},
+        "facts": [],
+        "history": [],
+        "undo": [],
+        "pending": None,
+        "panel": "goals",
+        "revision": 0,
+        "side": None,
+        "futures": {},
+        "lab": labmod.new_lab(),
+        "appearance": dict(avatar.DEFAULT),
+        "timezone": "UTC",
+        "daily": {"mission": None, "schedule": None, "messages": []},
+    }
+
+
+def export_payload(state, session):
+    """Everything the server stores for one session, as the user's own copy."""
+    return {
+        "app": "The Other Side",
+        "format": 1,
+        "exported_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "session": session,
+        "note": (
+            "Everything this app's server keeps for your session: goals, memories, conversation "
+            "context, Lab check-ins and decisions, missions, reminders and messages, simulated sides, "
+            "and your outfit and aura. Your photo is not included: it never leaves your browser."
+        ),
+        "data": json.loads(json.dumps(state)),
+    }
 
 
 def public(state):
@@ -105,6 +131,28 @@ def snapshot(state):
 
 
 def act(state, name, args, confirmed=False):
+    if name == "export_data":
+        # The browser downloads the file when it sees this action; nothing changes here.
+        state["pending"] = None
+        return (
+            "Downloading everything I keep about you as a file: goals, memories, Lab data, missions "
+            "and messages. Your photo isn't in it; it stays in this browser."
+        )
+    if name == "wipe_all_data":
+        if not confirmed:
+            state["pending"] = {"name": name, "args": {}}
+            return (
+                "Delete everything I keep about you: goals, memories, Lab data, missions, messages, "
+                "and your photo in this browser? This cannot be undone. Say yes or no."
+            )
+        state.clear()
+        state.update(fresh_state())
+        # Transient flag: the voice turn deletes the stored row instead of saving, and tells the browser.
+        state["wiped"] = True
+        return (
+            "Done. Everything I kept about you is deleted, and your photo is being removed from this "
+            "browser. We can start fresh whenever you like."
+        )
     if name in ("open_day", "get_mission"):
         state["pending"] = None
         state["panel"] = "goals"

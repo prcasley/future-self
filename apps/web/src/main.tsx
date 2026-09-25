@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { createRoot } from "react-dom/client";
 import { Hologram } from "./Hologram";
 import { LabPanel, OtherSidePanel, SIDE_LABELS } from "./Panels";
-import { turn, type EchoState } from "./api";
+import { downloadExport, turn, type EchoState } from "./api";
 import { PortraitAvatar } from "./avatar/PortraitAvatar";
 import { forgetPhoto, loadPhoto, savePhoto } from "./avatar/photoStore";
 import { normalizePhoto } from "./avatar/preparePortrait";
@@ -274,7 +274,22 @@ function App() {
         if (item.event === "state") {
           sideRef.current = item.data.side;
           setState(item.data);
+          // "Delete all my data" was confirmed: the server row is gone; the photo lives here.
+          if (item.data.wiped) {
+            setScanOpen(false);
+            setPortrait(null);
+            void forgetPhoto().then((removed) => {
+              if (!removed)
+                setStatus(
+                  "Couldn't confirm your photo was removed from browser storage. Clear this site's data to be sure.",
+                );
+            });
+          }
         }
+        if (item.event === "tool_call" && item.data.name === "export_data")
+          void downloadExport(session).catch(() =>
+            setStatus("The download didn't start. Try again in a moment."),
+          );
         if (item.event === "status") setStatus(item.data.text);
         if (
           item.event === "tool_call" &&
@@ -561,6 +576,11 @@ function App() {
                 it. The face scan measures on this device and sends Nebius only
                 the ratio numbers for its future projection.
               </p>
+              <p>
+                Say “export my data” to download everything I keep about you.
+                Say “delete all my data” to erase it all, photo included; I’ll
+                ask you to confirm first.
+              </p>
               {ledger.slice(0, 5).map((x) => (
                 <div className="card" key={x.id}>
                   <strong>
@@ -666,6 +686,7 @@ function App() {
             <p>“That was too much.” · “Come back.” · “Undo that.”</p>
             <p>“Put on the monarch armor.” · “Make my aura gold.”</p>
             <p>“Scan my face.” · “Close.”</p>
+            <p>“Export my data.” · “Delete all my data.”</p>
           </div>
         </aside>
       </div>

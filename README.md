@@ -96,7 +96,7 @@ Browser recognition → transcript → FastAPI → SQLite context → Nebius Sup
 
 This is a **single-user loopback-only development service**. Session IDs are not authentication. SQLite is stored in ignored `local-data/echo.db`; localStorage retains a browser session ID. Prompts and selected context go to Nebius. Browser recognition may process audio remotely; that traffic is outside the backend ledger. No analytics are included. The one remote request is the Google Fonts stylesheet. A photo chosen with **Photo** is processed and stored only in the browser (IndexedDB) and never reaches the backend; the face engine's model files are served by this app. The server keeps only the outfit and aura names, and the face scan sends it only seven ratio numbers (which the model sees, with the side).
 
-Forgetting removes an explicit fact from active recall and clears recent context and undo snapshots after confirmation. It is not secure disk erasure or deletion of provider records. Account-wide wipe/export, multi-device identity and authenticated deployment remain planned.
+Forgetting removes an explicit fact from active recall and clears recent context and undo snapshots after confirmation. Say “export my data” and the browser downloads everything the server keeps for your session as JSON. Say “delete all my data” and, after a spoken yes, the server deletes the session's stored row and the browser deletes your photo. None of this is secure disk erasure or deletion of provider records. Multi-device identity remains planned.
 
 ## Validation
 

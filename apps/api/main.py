@@ -1,5 +1,6 @@
 import asyncio
 import json
+import re
 import time
 from collections import defaultdict
 from pathlib import Path
@@ -13,9 +14,22 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from . import avatar, daily, otherside, scan
 from . import lab as labmod
-from .store import PANELS, Store, act, public
+from .store import PANELS, Store, act, export_payload, public
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+# Whole-account privacy commands, handled without the model. Lab-only wipes stay with wipe_lab.
+EXPORT_ALL = re.compile(
+    r"\b(export|download)\b (all )?(of )?my (data|information|stuff)\b"
+    r"|\b(export|download) everything\b"
+    r"|\bgive me (a copy of )?(all )?(of )?my data\b"
+)
+WIPE_ALL = re.compile(
+    r"\b(delete|erase|wipe|remove|clear|forget) (all|everything)( of)?"
+    r"( my data| my information| you know about me| about me)?( please)?$"
+    r"|\b(delete|erase|wipe) (all )?(of )?my (data|account|information)( please)?$"
+)
 
 
 class Settings(BaseSettings):
@@ -147,6 +161,19 @@ TOOLS = [
         ["yes"],
     ),
     tool("wipe_lab", "Erase all Lab check-ins and decisions, after confirmation.", {}, []),
+    tool(
+        "export_data",
+        "Download a copy of everything the app stores about the user, as a file. Only when the user asks.",
+        {},
+        [],
+    ),
+    tool(
+        "wipe_all_data",
+        "Delete everything the app stores about the user (goals, memories, Lab, missions, messages, photo). "
+        "Only when the user asks to delete all their data. Server asks for spoken confirmation.",
+        {},
+        [],
+    ),
     tool(
         "set_appearance",
         "Change the look of the user's portrait projection, like a character creator: outfit "
@@ -392,6 +419,17 @@ def lab_experiment(session_id: UUID, side: str = "good"):
     return otherside.compare_policies(str(session_id), state["goals"], checkins, side)
 
 
+@app.get("/export/{session_id}")
+def export_all(session_id: UUID):
+    """The user's own copy of everything stored for the session. The photo never reaches the server."""
+    body = json.dumps(export_payload(store.load(str(session_id)), str(session_id)), indent=2)
+    return Response(
+        body,
+        media_type="application/json",
+        headers={"Content-Disposition": "attachment; filename=the-other-side-export.json"},
+    )
+
+
 @app.get("/lab/{session_id}/export")
 def lab_export(session_id: UUID):
     """Anonymized JSONL: signals, features, decisions, rewards. No goal text, facts, or notes."""
@@ -503,6 +541,12 @@ async def text_turn(turn: Turn):
                         "rate_intensity",
                         {"rating": normalized.replace("that was ", "").replace(" ", "_")},
                     )
+                elif EXPORT_ALL.search(normalized):
+                    state["pending"] = None
+                    action, args = "export_data", {}
+                elif WIPE_ALL.search(normalized):
+                    state["pending"] = None
+                    action, args = "wipe_all_data", {}
                 elif (command := daily.shortcut(turn.text)) is not None:
                     state["pending"] = None
                     action, args = command
@@ -563,8 +607,9 @@ async def text_turn(turn: Turn):
                             answer = spoken
                     if action == "log_checkin" and state["lab"]["decisions"]:
                         await llm_policy(state)
+                wiped = state.pop("wiped", False)
                 # Don't reintroduce forgotten content into model history.
-                if action == "confirm" and answer.startswith(("Forgot", "Corrected")):
+                if wiped or (action == "confirm" and answer.startswith(("Forgot", "Corrected"))):
                     state["history"] = []
                 else:
                     state["history"] += [
@@ -572,11 +617,15 @@ async def text_turn(turn: Turn):
                         {"role": "assistant", "content": answer},
                     ]
                     state["history"] = state["history"][-20:]
-                store.save(session, state)
+                if wiped:
+                    # Delete the stored row instead of saving an empty one.
+                    store.delete(session)
+                else:
+                    store.save(session, state)
                 if action:
                     yield event("tool_call", {"name": action, "args": args})
                     yield event("tool_result", {"name": action, "text": answer})
-                yield event("state", public(state))
+                yield event("state", {**public(state), "wiped": True} if wiped else public(state))
                 yield event("sentence", {"text": answer})
             except asyncio.CancelledError:
                 raise

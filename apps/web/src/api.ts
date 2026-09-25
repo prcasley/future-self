@@ -79,6 +79,8 @@ export type EchoState = {
   lab: LabState;
   /** Voice-picked wardrobe for the portrait projection. The photo itself never leaves the browser. */
   appearance: { outfit: string; aura: string };
+  /** Set once, on the turn that confirmed "delete all my data". */
+  wiped?: boolean;
 };
 export type ScanProjection = {
   side: string | null;
@@ -94,6 +96,19 @@ export type ScanProjection = {
   model: string | null;
   disclaimer: string;
 };
+/** Download everything the server keeps for this session as a JSON file. */
+export async function downloadExport(session_id: string): Promise<void> {
+  const response = await fetch("/api/export/" + session_id);
+  if (!response.ok) throw new Error("Export failed");
+  const url = URL.createObjectURL(await response.blob());
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "the-other-side-export.json";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 /** Future card for the face scan. Sends ratio numbers only; the photo never leaves the browser. */
 export async function projectScan(
   session_id: string,

@@ -62,3 +62,11 @@ Response:
 ```
 
 With a key set, one Super call writes the rows and is logged in the ledger. The server keeps every `future` within 8% of `now`, clamps `chance` to 5–97, replaces notes that are too long or mention appearance, health or age, and fills missing rows locally. Without a key, or if the call fails or streams bad JSON, `runner` is `local` and the rows come from a deterministic projection with the same shape. Nothing is stored.
+
+## Your data — v0.5
+
+`GET /export/{session_id}` returns everything the server keeps for the session as a JSON attachment (`the-other-side-export.json`): `{app, format: 1, exported_at, session, note, data}`, where `data` is the stored state (goals, facts, conversation context, undo snapshots, Lab, missions, schedule and messages, simulated sides, appearance, timezone). The photo is never on the server, so it is never in the export.
+
+New tools: `export_data()` and `wipe_all_data()`. Spoken shortcuts handled without the model: “export my data”, “download my data”, “give me a copy of my data”; “delete all my data”, “delete everything”, “forget everything about me”, “delete my account”. Narrower requests (“wipe the lab”, “delete all my goals”, “forget my photo”) keep their own paths.
+
+`export_data` changes nothing; the browser starts the download when it sees the `tool_call`. `wipe_all_data` always stages a spoken confirmation, whether the shortcut or the model asked for it. On “yes”, the server deletes the session's row (the model-call ledger holds no session data), and the turn's `state` event carries `wiped: true` once, so the browser deletes the photo from IndexedDB. A new topic expires the pending wipe.
