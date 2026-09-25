@@ -120,7 +120,9 @@ def act(state, name, args, confirmed=False):
             return daily.describe(None)
         item["done"] = True
         state["revision"] += 1
-        return "Marked your mission complete from your report. What helped, and what should we change next time?"
+        return (
+            "Marked your mission complete from your report. What helped, and what should we change next time?"
+        )
     if name == "schedule_checkin":
         answer = daily.schedule(state, args.get("time", ""))
         state["revision"] += 1
@@ -132,7 +134,11 @@ def act(state, name, args, confirmed=False):
         return "Daily reminders are off."
     if name == "read_messages":
         messages = state["daily"]["messages"]
-        return messages[-1]["text"] if messages else "No scheduled messages yet. Say remind me daily at 9 AM to choose a time."
+        return (
+            messages[-1]["text"]
+            if messages
+            else "No scheduled messages yet. Say remind me daily at 9 AM to choose a time."
+        )
     if name == "recap":
         state["panel"] = "memory"
         goals = [f"Your {domain} goal is {goal}." for domain, goal in state["goals"].items()]

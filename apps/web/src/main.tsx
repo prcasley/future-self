@@ -20,7 +20,7 @@ const CLOSE_SCAN =
   /^\s*(close( it| the scan)?|done|that's enough|exit|hide (it|the scan))\s*[.!]?\s*$/i;
 
 const empty: EchoState = {
-  daily: {mission: null, schedule: null, messages: []},
+  daily: { mission: null, schedule: null, messages: [] },
   goals: {},
   facts: [],
   panel: "goals",
@@ -85,17 +85,29 @@ function App() {
       if (pending || document.hidden || busy.current) return;
       pending = true;
       try {
-        const response = await fetch(`/api/daily/${session}/poll`, {method: "POST"});
+        const response = await fetch(`/api/daily/${session}/poll`, {
+          method: "POST",
+        });
         if (!response.ok) return;
         const next: EchoState = await response.json();
-        if (alive) setState(previous => next.revision >= previous.revision ? next : previous);
-      } catch { /* keep the inbox available during an outage */ }
-      finally { pending = false; }
+        if (alive)
+          setState((previous) =>
+            next.revision >= previous.revision ? next : previous,
+          );
+      } catch {
+        /* keep the inbox available during an outage */
+      } finally {
+        pending = false;
+      }
     };
     void poll();
     const timer = window.setInterval(poll, 30000);
     document.addEventListener("visibilitychange", poll);
-    return () => { alive = false; clearInterval(timer); document.removeEventListener("visibilitychange", poll); };
+    return () => {
+      alive = false;
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", poll);
+    };
   }, []);
   useEffect(() => {
     fetch("/api/state/" + session)
@@ -601,15 +613,39 @@ function App() {
           )}
           {state.daily?.mission && (
             <div className="card">
-              <div className="eyebrow">{state.daily.mission.done ? "MISSION COMPLETE" : "YOUR DAILY MISSION"} · {state.daily.mission.minutes} MIN</div>
+              <div className="eyebrow">
+                {state.daily.mission.done
+                  ? "MISSION COMPLETE"
+                  : "YOUR DAILY MISSION"}{" "}
+                · {state.daily.mission.minutes} MIN
+              </div>
               <p>{state.daily.mission.goal}</p>
-              <ol>{state.daily.mission.steps.map((step, index) => <li key={index}>{step.minutes} min — {step.text}</li>)}</ol>
+              <ol>
+                {state.daily.mission.steps.map((step, index) => (
+                  <li key={index}>
+                    {step.minutes} min — {step.text}
+                  </li>
+                ))}
+              </ol>
               <p>{state.daily.mission.basis}</p>
               <small>{state.daily.mission.disclaimer}</small>
             </div>
           )}
-          {state.daily?.schedule?.enabled && <p>Daily check-in · {state.daily.schedule.time} · {state.daily.schedule.timezone}. In-app only. Say “stop reminders” to cancel.</p>}
-          {!!state.daily?.messages.length && <div className="card" aria-live="polite"><div className="eyebrow">LATEST CHECK-IN · {state.daily.messages.at(-1)?.date}</div><p>{state.daily.messages.at(-1)?.text}</p></div>}
+          {state.daily?.schedule?.enabled && (
+            <p>
+              Daily check-in · {state.daily.schedule.time} ·{" "}
+              {state.daily.schedule.timezone}. In-app only. Say “stop reminders”
+              to cancel.
+            </p>
+          )}
+          {!!state.daily?.messages.length && (
+            <div className="card" aria-live="polite">
+              <div className="eyebrow">
+                LATEST CHECK-IN · {state.daily.messages.at(-1)?.date}
+              </div>
+              <p>{state.daily.messages.at(-1)?.text}</p>
+            </div>
+          )}
           {state.pending && (
             <div className="confirmation">
               A change is waiting.

@@ -68,6 +68,8 @@ def test_spoken_recap_works_offline_and_correction_does_not_reintroduce_old_fact
         response = client.post("/voice/text_turn", json={"session_id": session, "text": "yes"})
         assert "Corrected" in response.text
         assert "morning" not in json.dumps(main.store.load(session))
-        response = client.post("/voice/text_turn", json={"session_id": session, "text": "What do you remember about me?"})
+        response = client.post(
+            "/voice/text_turn", json={"session_id": session, "text": "What do you remember about me?"}
+        )
         assert "evening" in response.text
         assert "event: error" not in response.text

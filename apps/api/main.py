@@ -68,9 +68,24 @@ def tool(name, description, properties, required):
 STRING = {"type": "string", "maxLength": 600}
 NUMBER = {"type": "string", "maxLength": 12, "description": "A number, spoken. Send digits."}
 TOOLS = [
-    tool("get_mission", "Get a practical mission sized by the latest Lab target or a 15-minute starter. Optionally select an existing goal domain.", {"domain": STRING}, []),
-    tool("complete_mission", "Mark the current mission done only on the user's explicit report. This does not log a Lab check-in.", {}, []),
-    tool("schedule_checkin", "Only when requested: set one daily in-app reminder at a 24-hour HH:MM time. Ask about AM/PM if ambiguous. Browser timezone is used. No notifications outside the app.", {"time": STRING}, ["time"]),
+    tool(
+        "get_mission",
+        "Get a practical mission sized by the latest Lab target or a 15-minute starter. Optionally select an existing goal domain.",
+        {"domain": STRING},
+        [],
+    ),
+    tool(
+        "complete_mission",
+        "Mark the current mission done only on the user's explicit report. This does not log a Lab check-in.",
+        {},
+        [],
+    ),
+    tool(
+        "schedule_checkin",
+        "Only when requested: set one daily in-app reminder at a 24-hour HH:MM time. Ask about AM/PM if ambiguous. Browser timezone is used. No notifications outside the app.",
+        {"time": STRING},
+        ["time"],
+    ),
     tool("stop_reminders", "Disable the user's daily in-app reminder.", {}, []),
     tool("read_messages", "Read the latest scheduled in-app check-in.", {}, []),
     tool(
@@ -464,7 +479,12 @@ async def text_turn(turn: Turn):
             try:
                 if normalized in ("undo", "undo that", "undo last change"):
                     action, args = "undo", {}
-                elif normalized in ("recap", "give me a recap", "what do you remember", "what do you remember about me"):
+                elif normalized in (
+                    "recap",
+                    "give me a recap",
+                    "what do you remember",
+                    "what do you remember about me",
+                ):
                     state["pending"] = None
                     action, args = "recap", {}
                 elif normalized in ("yes", "yes please", "confirm", "no", "cancel", "no thanks"):

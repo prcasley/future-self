@@ -14,13 +14,19 @@ def instant(value):
 def test_onboarding_without_provider_and_mission_persists(tmp_path, monkeypatch):
     path = str(tmp_path / "daily.db")
     monkeypatch.setattr(main, "store", Store(path))
+
     async def unavailable(*args, **kwargs):
         raise AssertionError("No model needed for onboarding shortcuts")
+
     monkeypatch.setattr(main, "model_turn", unavailable)
     session = str(uuid4())
     with TestClient(main.app) as client:
+
         def say(text):
-            return client.post("/voice/text_turn", json={"session_id": session, "text": text, "timezone": "America/New_York"}).text
+            return client.post(
+                "/voice/text_turn", json={"session_id": session, "text": text, "timezone": "America/New_York"}
+            ).text
+
         assert "one goal" in say("start my day")
         assert "15 minutes" in say("My goal is to learn Python")
         assert "Marked your mission complete" in say("mission complete")
@@ -37,7 +43,11 @@ def test_mission_uses_lab_target_and_selected_goal(tmp_path):
     state["goals"] = {"career": "Build an app", "learning": "Learn French"}
     act(state, "get_mission", {"domain": "learning"})
     state["lab"]["consent"] = True
-    act(state, "log_checkin", {"sleep_hours": 4, "energy": 1, "stress": 5, "effort_minutes": 10, "completed": False})
+    act(
+        state,
+        "log_checkin",
+        {"sleep_hours": 4, "energy": 1, "stress": 5, "effort_minutes": 10, "completed": False},
+    )
     item = state["daily"]["mission"]
     assert item["domain"] == "learning"
     assert item["minutes"] == state["lab"]["decisions"][-1]["target_minutes"]

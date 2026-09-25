@@ -18,8 +18,14 @@ function database({ fail = false, stored = new Blob(["old"]) } = {}) {
             const tx = {
               objectStore: () => ({
                 get: () => ({ result: value }),
-                put: (blob) => { value = blob; return {}; },
-                delete: () => { value = undefined; return {}; },
+                put: (blob) => {
+                  value = blob;
+                  return {};
+                },
+                delete: () => {
+                  value = undefined;
+                  return {};
+                },
               }),
             };
             queueMicrotask(() => tx.oncomplete());

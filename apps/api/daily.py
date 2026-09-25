@@ -37,14 +37,20 @@ def mission(state, domain=None, now=None):
     elif any(word in text for word in ("write", "book", "essay")):
         action = "Draft one small section without polishing it"
     result = {
-        "key": key, "date": date, "domain": domain, "goal": goal,
-        "minutes": minutes, "done": False,
+        "key": key,
+        "date": date,
+        "domain": domain,
+        "goal": goal,
+        "minutes": minutes,
+        "done": False,
         "steps": [
             {"minutes": setup, "text": f"Choose one small outcome for: {goal}"},
             {"minutes": work, "text": action},
             {"minutes": finish, "text": "Save your progress and name the next step"},
         ],
-        "basis": f"Latest Lab target. {last['why']}" if last else "Starter plan: 15 minutes; no Lab check-in yet.",
+        "basis": f"Latest Lab target. {last['why']}"
+        if last
+        else "Starter plan: 15 minutes; no Lab check-in yet.",
         "disclaimer": "A planning suggestion from your inputs, not a proven measure of capacity.",
     }
     state["daily"]["mission"] = result
@@ -65,7 +71,9 @@ def schedule(state, clock, now=None):
         return "Tell me a daily time, such as 9 AM or 18:30."
     local = today(state, now)
     state["daily"]["schedule"] = {
-        "time": clock, "timezone": state.get("timezone", "UTC"), "enabled": True,
+        "time": clock,
+        "timezone": state.get("timezone", "UTC"),
+        "enabled": True,
         # Scheduling after today's time starts tomorrow; do not create an immediate surprise.
         "last_date": local.date().isoformat() if local.strftime("%H:%M") >= clock else None,
     }
@@ -81,10 +89,13 @@ def deliver(state, now=None):
     if plan["last_date"] == date or local.strftime("%H:%M") < plan["time"]:
         return False
     item = mission(state, now=now)
-    state["daily"]["messages"].append({
-        "id": f"{date}-{plan['time']}", "date": date,
-        "text": "Your daily check-in. " + describe(item),
-    })
+    state["daily"]["messages"].append(
+        {
+            "id": f"{date}-{plan['time']}",
+            "date": date,
+            "text": "Your daily check-in. " + describe(item),
+        }
+    )
     state["daily"]["messages"] = state["daily"]["messages"][-14:]
     plan["last_date"] = date
     return True
@@ -101,15 +112,22 @@ def valid_timezone(name):
 def shortcut(text):
     normalized = text.strip(" .!?")
     low = normalized.lower()
-    commands = {"start my day": "open_day", "what is my mission": "get_mission",
-                "give me a mission": "get_mission", "mission complete": "complete_mission",
-                "stop reminders": "stop_reminders", "read my messages": "read_messages"}
+    commands = {
+        "start my day": "open_day",
+        "what is my mission": "get_mission",
+        "give me a mission": "get_mission",
+        "mission complete": "complete_mission",
+        "stop reminders": "stop_reminders",
+        "read my messages": "read_messages",
+    }
     if low in commands:
         return commands[low], {}
     match = re.fullmatch(r"my goal is (.+)", normalized, re.I)
     if match:
         return "set_goal", {"domain": "personal", "goal": match[1]}
-    match = re.fullmatch(r"(?:remind me|check in)(?: every day| daily)? at (\d{1,2})(?::(\d{2}))?\s*(am|pm)?", low)
+    match = re.fullmatch(
+        r"(?:remind me|check in)(?: every day| daily)? at (\d{1,2})(?::(\d{2}))?\s*(am|pm)?", low
+    )
     if match:
         hour, minute, meridiem = int(match[1]), int(match[2] or 0), match[3]
         if not meridiem and match[2] is None:
