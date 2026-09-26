@@ -379,9 +379,13 @@ export function LivingPortrait({
         });
 
         const camera = new THREE.OrthographicCamera(0, W, 0, H, -10, 10);
+        let drawn = false;
+        let size = "";
         const fit = () => {
           const w = Math.max(1, el.clientWidth);
           const h = Math.max(1, el.clientHeight);
+          if (`${w}x${h}` === size) return;
+          size = `${w}x${h}`;
           renderer.setSize(w, h, false);
           const s = Math.min(w / W, h / H);
           const vw = w / s;
@@ -391,6 +395,8 @@ export function LivingPortrait({
           camera.top = (H - vh) / 2;
           camera.bottom = camera.top + vh;
           camera.updateProjectionMatrix();
+          // Resizing clears the canvas after this frame's draw, so draw again rather than flash.
+          if (drawn) renderer.render(scene, camera);
         };
         fit();
         const observer = new ResizeObserver(fit);
@@ -441,6 +447,7 @@ export function LivingPortrait({
             if (light) material.uniforms.uColor.value.setRGB(...light);
           });
           renderer.render(scene, camera);
+          drawn = true;
           frames++;
           if (now - lastFps >= 1000) {
             callbacks.current.onFps?.((frames * 1000) / (now - lastFps));

@@ -78,7 +78,7 @@ export function speechOpen(t: number, seed = 1): number {
   const i = Math.floor(t * rate);
   const u = t * rate - i;
   const pause = hash(i, seed + 11) < 0.16;
-  const size = pause ? 0.04 : 0.28 + 0.62 * hash(i, seed);
+  const size = pause ? 0.04 : 0.22 + 0.5 * hash(i, seed);
   const shape = Math.pow(Math.sin(Math.PI * u), 0.8);
   return clamp01(size * shape);
 }
