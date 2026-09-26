@@ -53,8 +53,19 @@ function mediapipeAssets(): Plugin {
   };
 }
 
+const here = dirname(fileURLToPath(import.meta.url));
+
 export default defineConfig({
   plugins: [mediapipeAssets()],
+  build: {
+    rollupOptions: {
+      // The app, plus the living-portrait preview page.
+      input: {
+        main: resolve(here, "index.html"),
+        living: resolve(here, "living.html"),
+      },
+    },
+  },
   server: {
     port: 5186,
     strictPort: true,
