@@ -15,6 +15,13 @@ At the user's explicit request, Antigravity implemented the procedural bust, sha
 - Included a small integration stage alongside the backend. No Antigravity agent or overnight job was launched.
 - Use ports 5186 and 8016 to avoid other local apps.
 
+## September 25, 2026 — photoreal future portraits
+
+- Adopt docs/VISION.md: photoreal generated source portraits, voice first with optional typing, Windows web product first, glasses later after device validation.
+- Keep React/Three.js/FastAPI and Nebius/Nemotron. Blender assets and a virtual environment are Antigravity/Gemini's work; live portrait tracking/animation in living/* belongs to Claude. Unreal is an optional later showcase.
+- Codex adds a style-only JSON brief and pluggable local/tokenfactory/endpoint portrait API. Server defaults to local; reference images require per-request consent and only go to the configured identity endpoint. No portrait persistence or paid verification calls.
+- Reserve model/image slots in daily budgets before generation; log metadata only. See docs/FUTURE-PORTRAIT.md for the adapter contract and operational limits.
+
 ## Findings
 
 Super and Nano passed live checks. Correct Nano ID: `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B`. Omni/flux were absent from the account's catalog; separate endpoints remain untested. No real voice fixture was supplied. Sandbox project ID is missing; no successful fork is claimed.

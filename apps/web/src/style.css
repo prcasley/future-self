@@ -419,6 +419,41 @@ footer {
 .lab-table tr.active td {
   color: var(--blue);
 }
+.type-instead {
+  max-width: 560px;
+  margin: 0 auto 20px;
+  padding: 0 16px;
+}
+.type-instead summary {
+  cursor: pointer;
+  padding: 8px 0;
+}
+.type-instead form {
+  display: grid;
+  gap: 8px;
+  padding-top: 8px;
+}
+.type-instead textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  padding: 12px;
+  color: #fff;
+  background: #101923;
+  border: 1px solid #607080;
+  border-radius: 8px;
+  font: inherit;
+}
+.type-instead textarea:focus-visible {
+  outline: 2px solid #8bdcff;
+  outline-offset: 2px;
+}
+.type-instead button {
+  justify-self: end;
+}
+.type-instead small {
+  color: #c2cbd5;
+}
 .side-meta a {
   color: #fff;
 }
@@ -426,4 +461,51 @@ footer {
   .sides {
     grid-template-columns: 1fr;
   }
+}
+/* A small, optional first-portrait flow beside the voice stage. */
+.future-portrait {
+  margin-bottom: 24px;
+  border: 1px solid #ffffff26;
+  border-radius: 16px;
+  padding: 18px;
+}
+.future-portrait summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.future-portrait label {
+  display: block;
+  margin: 16px 0;
+  font-size: 14px;
+}
+.future-portrait select,
+.future-portrait input[type="file"] {
+  display: block;
+  max-width: 100%;
+  margin-top: 8px;
+}
+.future-portrait select {
+  background: #171c25;
+  color: #fff;
+  padding: 8px;
+  border: 1px solid #ffffff40;
+  border-radius: 8px;
+}
+.portrait-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.portrait-result img {
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+}
+.portrait-result dt {
+  text-transform: capitalize;
+  font-size: 12px;
+  opacity: 0.6;
+}
+.portrait-result dd {
+  margin: 2px 0 10px;
 }

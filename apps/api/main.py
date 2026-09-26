@@ -4,15 +4,19 @@ import re
 import time
 from collections import defaultdict
 from pathlib import Path
+from threading import Lock
+from typing import Literal
 from uuid import UUID
 
 import httpx
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import Response, StreamingResponse
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from . import avatar, daily, otherside, scan
+from . import avatar, daily, otherside, portrait, scan
 from . import lab as labmod
 from .store import PANELS, Store, act, export_payload, public
 
@@ -47,12 +51,17 @@ class Settings(BaseSettings):
     web_dist: str = str(ROOT / "apps" / "web" / "dist")
     model_daily_cap: int = 0  # model calls per UTC day across everyone; 0 = unlimited
     session_daily_cap: int = 0  # model-backed turns per session per UTC day; 0 = unlimited
+    future_image_backend: Literal["local", "tokenfactory", "endpoint"] = "local"
+    future_image_model: str = ""
+    future_image_endpoint: str = ""
+    future_image_endpoint_key: str = ""
 
 
 settings = Settings()
 store = Store(settings.database)
 app = FastAPI(title="The Other Side", version="0.5.0")
 locks = defaultdict(asyncio.Lock)
+portrait_budget_lock = Lock()
 session_turns = defaultdict(lambda: ["", 0])  # session -> [UTC date, model-backed turns]
 BUDGET_MESSAGE = (
     "This demo has used today's AI budget, so I can't talk freely until tomorrow. Built-in commands "
@@ -92,6 +101,95 @@ class Projection(BaseModel):
     session_id: UUID
     ratios: dict[str, float]
     side: str | None = Field(default=None, max_length=12)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error(request: Request, error: RequestValidationError):
+    if request.url.path.endswith("/future/portrait"):
+        # FastAPI's default error includes rejected input, which could contain a private photo.
+        return JSONResponse(
+            status_code=422,
+            content={"detail": "Invalid portrait request"},
+            headers={"Cache-Control": "no-store"},
+        )
+    return await request_validation_exception_handler(request, error)
+
+
+@app.get("/future/portrait/config")
+def portrait_config(response: Response):
+    response.headers["Cache-Control"] = "no-store"
+    backend = settings.future_image_backend
+    return {
+        "backend": backend,
+        "accepts_photo": backend == "endpoint",
+        "ready": backend == "local"
+        or bool(
+            settings.nebius_api_key
+            and (settings.future_image_endpoint if backend == "endpoint" else settings.future_image_model)
+        ),
+    }
+
+
+@app.post("/future/portrait")
+async def future_portrait(body: portrait.PortraitRequest, response: Response):
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        portrait.check_backend(settings, body)
+    except ValueError as error:
+        raise HTTPException(400, str(error), headers={"Cache-Control": "no-store"}) from None
+    remote = settings.future_image_backend != "local"
+    if remote and not settings.nebius_api_key:
+        raise HTTPException(503, "Configure Nemotron before rendering", headers={"Cache-Control": "no-store"})
+    side = portrait.canonical_side(body.side)
+    brief = portrait.local_brief(side)
+    result = {
+        "side": side,
+        "backend": settings.future_image_backend,
+        "brief": brief,
+        "brief_source": "local",
+        "image_b64": None,
+        "mime_type": None,
+        "identity_preserving": False,
+        "identity_requested": remote and settings.future_image_backend == "endpoint",
+        "disclaimer": "Imagined styling, not a prediction. Identity fidelity requires visual review.",
+    }
+    if not settings.nebius_api_key:
+        return result
+    models = [settings.nebius_super_model]
+    if remote:
+        models.append("future-image:" + settings.future_image_backend)
+    with portrait_budget_lock:
+        if not allow_model(str(body.session_id)):
+            raise HTTPException(429, BUDGET_MESSAGE, headers={"Cache-Control": "no-store"})
+        slots = store.reserve_calls(models, settings.model_daily_cap)
+    if slots is None:
+        raise HTTPException(429, BUDGET_MESSAGE, headers={"Cache-Control": "no-store"})
+    completed = set()
+    try:
+        for index in range(len(slots)):
+            started = time.monotonic()
+            status = "error"
+            try:
+                if index == 0:
+                    brief = await portrait.generate_brief(settings, side)
+                    result.update(brief=brief, brief_source="nemotron")
+                else:
+                    result.update(await portrait.render(settings, brief, body))
+                status = "ok"
+            finally:
+                store.finish_call(slots[index], int((time.monotonic() - started) * 1000), status)
+                completed.add(slots[index])
+    except (httpx.HTTPError, TimeoutError, ValueError, KeyError, IndexError, TypeError):
+        # Never expose provider exceptions/bodies: they may repeat the photo or a credential.
+        raise HTTPException(
+            502,
+            "Portrait provider unavailable or returned an invalid result",
+            headers={"Cache-Control": "no-store"},
+        ) from None
+    finally:
+        for slot in set(slots) - completed:
+            store.finish_call(slot, 0, "not_sent")
+    return result
 
 
 def tool(name, description, properties, required):

@@ -61,6 +61,25 @@ class Store:
         with self.connect() as db:
             return db.execute("SELECT count(*) FROM ledger WHERE ts >= date('now')").fetchone()[0]
 
+    def reserve_calls(self, models, cap):
+        """Atomically reserve daily slots before portrait providers receive anything."""
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            used = db.execute("SELECT count(*) FROM ledger WHERE ts >= date('now')").fetchone()[0]
+            if cap and used + len(models) > cap:
+                return None
+            return [
+                db.execute(
+                    "INSERT INTO ledger(model,bytes_out,latency_ms,status) VALUES (?,0,0,'reserved')",
+                    (model,),
+                ).lastrowid
+                for model in models
+            ]
+
+    def finish_call(self, call_id, latency, status):
+        with self.connect() as db:
+            db.execute("UPDATE ledger SET latency_ms=?,status=? WHERE id=?", (latency, status, call_id))
+
     def ledger(self):
         with self.connect() as db:
             return [dict(x) for x in db.execute("SELECT * FROM ledger ORDER BY id DESC LIMIT 30")]

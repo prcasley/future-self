@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { createRoot } from "react-dom/client";
 import { Hologram } from "./Hologram";
+import { TypeInstead } from "./TypeInstead";
+import { FuturePortrait } from "./FuturePortrait";
 import { LabPanel, OtherSidePanel, SIDE_LABELS } from "./Panels";
 import { downloadExport, turn, type EchoState } from "./api";
 import { PortraitAvatar } from "./avatar/PortraitAvatar";
@@ -50,6 +52,7 @@ localStorage.setItem("echo-session", session);
 function App() {
   const [state, setState] = useState(empty);
   const [running, setRunning] = useState(false);
+  const typing = useRef(false);
   const [muted, setMuted] = useState(false);
   const [status, setStatus] = useState("Ready when you are");
   const [heard, setHeard] = useState("");
@@ -61,6 +64,7 @@ function App() {
   const [configured, setConfigured] = useState(false);
   const [talking, setTalking] = useState(false);
   const [portrait, setPortrait] = useState<string | null>(null);
+  const [portraitEpoch, setPortraitEpoch] = useState(0);
   const portraitRef = useRef<string | null>(null);
   portraitRef.current = portrait;
   const fileInput = useRef<HTMLInputElement>(null);
@@ -175,6 +179,7 @@ function App() {
   /** Photo commands never go to the server: the photo lives only in this browser. */
   const photoCommand = async (text: string): Promise<string | null> => {
     if (FORGET_PHOTO.test(text)) {
+      setPortraitEpoch((value) => value + 1);
       const removed = await forgetPhoto();
       setScanOpen(false);
       setPortrait(null);
@@ -198,7 +203,12 @@ function App() {
     return null;
   };
   const listen = () => {
-    if (enabled.current && !speaking.current && !busy.current) {
+    if (
+      enabled.current &&
+      !typing.current &&
+      !speaking.current &&
+      !busy.current
+    ) {
       try {
         recognition.current?.start();
       } catch {
@@ -255,7 +265,7 @@ function App() {
         local.startsWith("Done") ? "Removed your photo from this device" : "",
       );
       speak(local);
-      return;
+      return true;
     }
     const abort = new AbortController();
     controller.current = abort;
@@ -276,6 +286,7 @@ function App() {
           setState(item.data);
           // "Delete all my data" was confirmed: the server row is gone; the photo lives here.
           if (item.data.wiped) {
+            setPortraitEpoch((value) => value + 1);
             setScanOpen(false);
             setPortrait(null);
             void forgetPhoto().then((removed) => {
@@ -316,11 +327,18 @@ function App() {
         controller.current = null;
         if (!speaking.current) {
           if (!failed)
-            setStatus(enabled.current ? "Listening" : "Session ended");
+            setStatus(
+              typing.current
+                ? "Ready for your message"
+                : enabled.current
+                  ? "Listening"
+                  : "Session ended",
+            );
           listen();
         }
       }
     }
+    return !failed && id === generation.current;
   };
   const start = () => {
     if (enabled.current) {
@@ -342,7 +360,7 @@ function App() {
       (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
       setStatus(
-        "Voice recognition is unavailable here. Open this local page in Chrome or Edge.",
+        "Voice recognition is unavailable here. Use Type instead, or open this page in Chrome or Edge.",
       );
       return;
     }
@@ -354,6 +372,7 @@ function App() {
     rec.onresult = (e: any) => {
       if (
         !enabled.current ||
+        typing.current ||
         recognition.current !== rec ||
         busy.current ||
         speaking.current
@@ -396,7 +415,7 @@ function App() {
     setRunning(true);
     setStatus("Listening");
     try {
-      rec.start();
+      if (!typing.current) rec.start();
       void submit("start my day", false);
     } catch {
       enabled.current = false;
@@ -426,7 +445,12 @@ function App() {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.code === "Space" && !e.repeat && enabled.current) {
-        if ((e.target as HTMLElement)?.closest("button,a")) return;
+        if (
+          (e.target as HTMLElement)?.closest(
+            "button,a,input,textarea,select,[contenteditable]",
+          )
+        )
+          return;
         e.preventDefault();
         interrupt();
       }
@@ -497,13 +521,21 @@ function App() {
         </div>
       </header>
       <section className="intro">
-        <div className="eyebrow">THE OTHER SIDE · VOICE ONLY</div>
+        <div className="eyebrow">THE OTHER SIDE · VOICE FIRST</div>
         <h1>Meet the you on the other side.</h1>
         <p>
           Speak freely. ECHO listens, remembers, and shows you where your
           choices lead.
         </p>
       </section>
+      <TypeInstead
+        onSubmit={(text) => submit(text)}
+        onToggle={(open) => {
+          typing.current = open;
+          if (open) recognition.current?.abort();
+          else listen();
+        }}
+      />
       <div className="stage">
         <section className="presence">
           <div className="stage-label">
@@ -551,6 +583,7 @@ function App() {
           </div>
         </section>
         <aside>
+          <FuturePortrait key={portraitEpoch} session={session} />
           <div className="eyebrow">
             {state.panel === "privacy"
               ? "OUTBOUND CALLS"
@@ -572,9 +605,11 @@ function App() {
               <p>
                 Prompts go to Nebius. Browser recognition may process audio with
                 its provider. This prototype stores goals on this computer. Your
-                photo never leaves this browser; say “forget my photo” to delete
-                it. The face scan measures on this device and sends Nebius only
-                the ratio numbers for its future projection.
+                device-only Photo stays in this browser; say “forget my photo”
+                to delete it. Preview your future self has a separate, consented
+                photo request when an image service is configured. The face scan
+                measures on this device and sends Nebius only the ratio numbers
+                for its future projection.
               </p>
               <p>
                 Say “export my data” to download everything I keep about you.
@@ -697,8 +732,8 @@ function App() {
         </div>
         <p className="echo">{said}</p>
         <div className="transcript">
-          <span>HEARD · BROWSER TRANSCRIPT</span>
-          <p>{heard || "Your words appear here when you speak."}</p>
+          <span>YOUR MESSAGE · SPOKEN OR TYPED</span>
+          <p>{heard || "Your words appear here when you speak or type."}</p>
         </div>
         {did && <div className="action">DID · {did}</div>}
       </section>
@@ -712,7 +747,7 @@ function App() {
         onClose={() => setScanOpen(false)}
       />
       <footer>
-        <span>VOICE ONLY. ALWAYS YOUR CHOICE.</span>
+        <span>VOICE FIRST. ALWAYS YOUR CHOICE.</span>
         <span>
           {configured
             ? "NEBIUS CONNECTED · LOCAL PROTOTYPE"
