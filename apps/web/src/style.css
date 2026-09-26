@@ -501,6 +501,12 @@ footer {
   height: auto;
   border-radius: 12px;
 }
+.portrait-living {
+  aspect-ratio: 4 / 5;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #0b0d12;
+}
 .portrait-result dt {
   text-transform: capitalize;
   font-size: 12px;

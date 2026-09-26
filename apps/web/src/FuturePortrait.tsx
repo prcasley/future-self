@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { LivingPortrait, type LivingState } from "./living/LivingPortrait";
 
 type Config = { backend: string; accepts_photo: boolean; ready: boolean };
 type Result = {
@@ -17,6 +18,7 @@ export function FuturePortrait({ session }: { session: string }) {
   const [pending, setPending] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const [message, setMessage] = useState("");
+  const [living, setLiving] = useState<LivingState | null>(null);
   const request = useRef<AbortController | null>(null);
   const input = useRef<HTMLInputElement>(null);
 
@@ -45,6 +47,7 @@ export function FuturePortrait({ session }: { session: string }) {
     request.current = null;
     setPending(false);
     setResult(null);
+    setLiving(null);
     setFile(null);
     setConsent(false);
     setMessage("");
@@ -62,6 +65,7 @@ export function FuturePortrait({ session }: { session: string }) {
     request.current = controller;
     setPending(true);
     setResult(null);
+    setLiving(null);
     setMessage("Preparing your possible future…");
     setConsent(false);
     try {
@@ -111,7 +115,7 @@ export function FuturePortrait({ session }: { session: string }) {
       setResult(next);
       setMessage(
         next.image_b64
-          ? "Portrait ready. Live animation is the next integration."
+          ? "Portrait ready. It comes alive here, on this device."
           : "Your styling brief is ready. Image generation is not enabled in this mode.",
       );
     } catch (error) {
@@ -214,12 +218,25 @@ export function FuturePortrait({ session }: { session: string }) {
       <p role="status">{message}</p>
       {result && (
         <div className="portrait-result">
-          {result.image_b64 && (
-            <img
-              src={`data:${result.mime_type};base64,${result.image_b64}`}
-              alt={`Illustrative ${side} future portrait`}
-            />
-          )}
+          {result.image_b64 &&
+            (living === "noface" || living === "error" ? (
+              <img
+                src={`data:${result.mime_type};base64,${result.image_b64}`}
+                alt={`Illustrative ${side} future portrait`}
+              />
+            ) : (
+              <div
+                className="portrait-living"
+                role="img"
+                aria-label={`Illustrative ${side} future portrait, animated`}
+              >
+                <LivingPortrait
+                  imageUrl={`data:${result.mime_type};base64,${result.image_b64}`}
+                  accent={side}
+                  onState={setLiving}
+                />
+              </div>
+            ))}
           {result.image_b64 && (
             <p>
               {result.identity_requested
