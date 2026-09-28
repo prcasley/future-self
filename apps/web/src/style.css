@@ -463,6 +463,21 @@ footer {
   }
 }
 /* A small, optional first-portrait flow beside the voice stage. */
+.controls button {
+  min-height: 44px;
+  touch-action: manipulation;
+}
+@media (max-width: 760px) {
+  .interrupt-echo {
+    position: fixed;
+    bottom: max(16px, env(safe-area-inset-bottom));
+    right: 16px;
+    z-index: 50;
+    background: #d8eaff;
+    color: #08111d;
+    box-shadow: 0 4px 22px #0008;
+  }
+}
 .future-portrait {
   margin-bottom: 24px;
   border: 1px solid #ffffff26;

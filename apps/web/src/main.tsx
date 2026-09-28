@@ -228,8 +228,8 @@ function App() {
     recognition.current?.abort();
     setStatus(
       sideRef.current
-        ? `Speaking from the ${SIDE_LABELS[sideRef.current].toLowerCase()} · hold Space to interrupt`
-        : "ECHO is speaking · hold Space to interrupt",
+        ? `Speaking from the ${SIDE_LABELS[sideRef.current].toLowerCase()} · tap Interrupt ECHO to speak`
+        : "ECHO is speaking · tap Interrupt ECHO to speak",
     );
     const speechGeneration = generation.current;
     const utterance = new SpeechSynthesisUtterance(text);
@@ -355,12 +355,16 @@ function App() {
       setStatus("Session ended");
       return;
     }
+    if (!window.isSecureContext) {
+      setStatus("Microphone access needs the secure HTTPS app link. A desktop LAN address over HTTP will not work on your phone.");
+      return;
+    }
     const SpeechRecognition =
       (window as any).SpeechRecognition ||
       (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
       setStatus(
-        "Voice recognition is unavailable here. Use Type instead, or open this page in Chrome or Edge.",
+        "This browser does not provide speech recognition. Try Safari on iPhone or Chrome on Android using the HTTPS app link. Device support still needs a live test.",
       );
       return;
     }
@@ -475,6 +479,7 @@ function App() {
           <button className="primary" onClick={start}>
             {running ? "End session" : "Start session"}
           </button>
+          {running && <button className="interrupt-echo" onClick={interrupt}>Interrupt ECHO</button>}
           <button
             aria-pressed={muted}
             onClick={() => {
@@ -495,7 +500,7 @@ function App() {
           <button
             onClick={() =>
               setStatus(
-                "Allow the microphone in your browser’s site settings. Browser speech recognition may send audio to its provider. Hold Space to interrupt ECHO.",
+                "Open the secure app link in your phone browser and allow the microphone. Keep this page open during your session. Browser speech recognition may send audio to its provider. Tap Interrupt ECHO to speak; Space also works on desktop.",
               )
             }
           >
