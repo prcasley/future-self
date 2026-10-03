@@ -1,0 +1,14 @@
+# Normalize line endings: LF in the repo, so Windows checkouts stop showing 60+ phantom diffs.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.mp4 binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.tflite binary
+*.binarypb binary
+*.db binary
