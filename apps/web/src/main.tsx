@@ -110,8 +110,8 @@ function App() {
     noSpeech.current
       ? "Voice input isn't available in this browser. Use Type instead, or open this page in Chrome or Edge."
       : "Listening";
-  // Renée, ECHO's British voice. The label always names the engine actually speaking.
-  const [voiceLabel, setVoiceLabel] = useState("Voice: Renée · checking");
+  // Reneė, ECHO's British voice. The label always names the engine actually speaking.
+  const [voiceLabel, setVoiceLabel] = useState("Voice: Reneė · checking");
   const finishSpeaking = useRef<() => void>(() => {});
   const speechLevel = useRef<number | null>(0);
   const renee = useRef<ReturnType<typeof createRenee> | null>(null);
@@ -349,7 +349,7 @@ function App() {
     );
     const speechGeneration = generation.current;
     const voice = VOICES[sideRef.current || "home"] || VOICES.home;
-    // Listening resumes once, when Renée has finished every queued sentence.
+    // Listening resumes once, when Reneė has finished every queued sentence.
     finishSpeaking.current = () => {
       if (speechGeneration !== generation.current) return;
       speaking.current = false;

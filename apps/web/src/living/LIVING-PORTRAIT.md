@@ -48,7 +48,7 @@ recorded or stored.
 ## Limits
 
 - It is a 2D warp, so it cannot show what a real turn would reveal. Head moves are kept small.
-- Renée service playback drives the mouth from decoded audio energy at the actual playback
+- Reneė service playback drives the mouth from decoded audio energy at the actual playback
   position, with a short attack/release envelope. This follows volume and pauses, not phonemes.
   Browser speech (or a browser without audio decoding) retains the synthetic speech rhythm
   because browser speech exposes no audio samples. Fetching and interrupted service audio

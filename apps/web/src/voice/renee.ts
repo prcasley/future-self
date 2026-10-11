@@ -1,7 +1,7 @@
-// Renée: ECHO's voice. A British English woman.
+// Reneė: ECHO's voice. A British English woman.
 //
 // Two engines, in order:
-//  1. Renée's own voice, served by our API (/api/voice/tts), which forwards to the Kokoro
+//  1. Reneė's own voice, served by our API (/api/voice/tts), which forwards to the Kokoro
 //     model (voice bf_emma) running in our voice service. Same voice on every device.
 //  2. The best British female voice built into this browser.
 // It never switches silently: `describe()` always names the engine and the voice in use.
@@ -9,7 +9,7 @@
 import { decodeEnvelope, mouthAt, smoothMouth } from "./envelope.ts";
 
 export const RENEE = {
-  name: "Renée",
+  name: "Reneė",
   accent: "British English",
   lang: "en-GB",
   serviceVoice: "bf_emma",
@@ -38,7 +38,7 @@ const MALE =
 const isBritish = (v: VoiceLike) =>
   /^en[-_]GB$/i.test(v.lang) || /\bUK\b|United Kingdom/i.test(v.name);
 
-/** The British female voice Renée should use on this device, or null when it has none. */
+/** The British female voice Reneė should use on this device, or null when it has none. */
 export function pickReneeVoice<V extends VoiceLike>(
   voices: readonly V[],
 ): V | null {
@@ -253,7 +253,7 @@ export function createRenee(opts: {
   };
 }
 
-/** Fetch Renée's audio from our API. Returns null when the voice service isn't set up. */
+/** Fetch Reneė's audio from our API. Returns null when the voice service isn't set up. */
 export async function fetchReneeAudio(
   text: string,
   speed: number,

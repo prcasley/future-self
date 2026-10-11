@@ -1,4 +1,4 @@
-"""Renée: ECHO's British voice.
+"""Reneė: ECHO's British voice.
 
 A tiny TTS service around Kokoro-82M (open weights, Apache-2.0) with the British English
 female voice bf_emma. Deploy it as a Nebius Serverless Endpoint (see README.md); the main
@@ -25,7 +25,7 @@ SAMPLE_RATE = 24000
 if not API_KEY and os.environ.get("RENEE_TTS_OPEN") != "1":
     raise RuntimeError("Set RENEE_TTS_KEY (or RENEE_TTS_OPEN=1 for a local, unexposed test).")
 
-app = FastAPI(title="Renée TTS")
+app = FastAPI(title="Reneė TTS")
 # CPU is deliberate: deployment must not silently depend on a local GPU.
 torch.set_num_threads(int(os.environ.get("RENEE_CPU_THREADS", "4")))
 pipeline = KPipeline(lang_code="b", repo_id="hexgrad/Kokoro-82M", device="cpu")
@@ -42,7 +42,7 @@ class Speech(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"ok": True, "model": "hexgrad/Kokoro-82M", "voice": DEFAULT_VOICE, "name": "Renée",
+    return {"ok": True, "model": "hexgrad/Kokoro-82M", "voice": DEFAULT_VOICE, "name": "Reneė",
             "device": str(next(pipeline.model.parameters()).device), "threads": torch.get_num_threads()}
 
 
@@ -51,7 +51,7 @@ def synthesize(body: Speech, authorization: str = Header(default="")):
     if API_KEY and not hmac.compare_digest(authorization.encode(), f"Bearer {API_KEY}".encode()):
         raise HTTPException(401, "Missing or wrong key.")
     if body.voice not in VOICES:
-        raise HTTPException(400, f"Renée only speaks with a British voice: {sorted(VOICES)}")
+        raise HTTPException(400, f"Reneė only speaks with a British voice: {sorted(VOICES)}")
     # One shared model: bound CPU contention when several clients request speech.
     with synthesis_lock:
         chunks = [audio for _, _, audio in pipeline(body.text, voice=body.voice, speed=body.speed)]

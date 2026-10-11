@@ -74,13 +74,13 @@ class Settings(BaseSettings):
     web_dist: str = str(ROOT / "apps" / "web" / "dist")
     model_daily_cap: int = 0  # model calls per UTC day across everyone; 0 = unlimited
     session_daily_cap: int = 0  # model-backed turns per session per UTC day; 0 = unlimited
-    tts_daily_cap: int = 0  # Renée voice requests per UTC day across everyone; 0 = unlimited
+    tts_daily_cap: int = 0  # Reneė voice requests per UTC day across everyone; 0 = unlimited
     rate_limit_per_minute: int = 0  # hosted demo: API requests per client IP per minute; 0 = off
     future_image_backend: Literal["local", "tokenfactory", "endpoint"] = "local"
     future_image_model: str = ""
     future_image_endpoint: str = ""
     future_image_endpoint_key: str = ""
-    # Renée, ECHO's British voice: a Kokoro TTS service (services/renee-tts) on Nebius Serverless.
+    # Reneė, ECHO's British voice: a Kokoro TTS service (services/renee-tts) on Nebius Serverless.
     # Empty = not deployed; the browser's British female voice is used and the UI says so.
     renee_tts_url: str = ""
     renee_tts_key: str = ""
@@ -96,7 +96,7 @@ locks = defaultdict(asyncio.Lock)
 source_locks = defaultdict(asyncio.Lock)
 portrait_budget_lock = Lock()
 session_turns = defaultdict(lambda: ["", 0])  # session -> [UTC date, model-backed turns]
-tts_today = ["", 0]  # [UTC date, Renée voice requests]
+tts_today = ["", 0]  # [UTC date, Reneė voice requests]
 tts_lock = Lock()
 sources_today = ["", 0]  # [UTC date, Tavily searches]
 # After Nebius fails with a 5xx or a timeout, free conversation pauses briefly instead of making
@@ -146,7 +146,7 @@ def over_budget():
 
 
 def allow_tts():
-    """Spend one Renée voice request, or say no when today's voice budget is used up."""
+    """Spend one Reneė voice request, or say no when today's voice budget is used up."""
     if not settings.tts_daily_cap:
         return True
     today = time.strftime("%Y-%m-%d", time.gmtime())
@@ -617,7 +617,7 @@ def health():
         "sandboxes": bool(settings.nebius_project_id),
         "sources": {"provider": "tavily", "configured": bool(settings.tavily_api_key.strip())},
         "voice": {
-            "name": "Renée",
+            "name": "Reneė",
             "accent": "British English",
             "engine": "kokoro" if settings.renee_tts_url else "browser",
         },
@@ -859,11 +859,11 @@ class SpeechRequest(BaseModel):
 
 @app.post("/voice/tts")
 async def renee_tts(body: SpeechRequest):
-    """Renée's voice. Forwards one sentence to the Kokoro service and returns WAV audio."""
+    """Reneė's voice. Forwards one sentence to the Kokoro service and returns WAV audio."""
     if not settings.renee_tts_url:
-        raise HTTPException(503, "Renée's voice service isn't deployed, so this browser's British voice is used.")
+        raise HTTPException(503, "Reneė's voice service isn't deployed, so this browser's British voice is used.")
     if not allow_tts():
-        raise HTTPException(429, "Renée has used today's voice budget, so this browser's British voice is used.")
+        raise HTTPException(429, "Reneė has used today's voice budget, so this browser's British voice is used.")
     headers = {"Authorization": f"Bearer {settings.renee_tts_key}"} if settings.renee_tts_key else {}
     try:
         async with httpx.AsyncClient(timeout=15) as client:
@@ -874,9 +874,9 @@ async def renee_tts(body: SpeechRequest):
             )
         upstream.raise_for_status()
     except (httpx.HTTPError, TimeoutError):
-        raise HTTPException(503, "Renée's voice service didn't answer, so this browser's British voice is used.") from None
+        raise HTTPException(503, "Reneė's voice service didn't answer, so this browser's British voice is used.") from None
     if not upstream.content or not upstream.headers.get("content-type", "").startswith("audio/"):
-        raise HTTPException(503, "Renée's voice service returned no audio.")
+        raise HTTPException(503, "Reneė's voice service returned no audio.")
     return Response(upstream.content, media_type=upstream.headers["content-type"],
                     headers={"Cache-Control": "no-store"})
 

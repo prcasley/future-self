@@ -9,14 +9,14 @@ screen capture for the app.
 
 | Time | Shot | What we hear |
 | --- | --- | --- |
-| 0:00–0:12 | Dark room. The reflector on the desk, empty. Then ECHO's face fades in, floating. | Renée: "Good evening. I'm you, one year from now. Let's talk about what got us here." |
+| 0:00–0:12 | Dark room. The reflector on the desk, empty. Then ECHO's face fades in, floating. | Reneė: "Good evening. I'm you, one year from now. Let's talk about what got us here." |
 | 0:12–0:25 | Prat, on camera or voice-over, beside the reflector. Title card: *The Other Side*. | "Goal apps are checklists. What changes you is a conversation with someone who remembers, and knows when to push. The most convincing version of that person is you, a year from now." |
 | 0:25–0:55 | Screen capture: Start session, mic prompt, live greeting. Prat says "My goal is to learn Python", then "What is my mission?". Caption: *NVIDIA Nemotron 3 Super on Nebius Token Factory*. | ECHO saves the goal out loud and gives a mission sized to today. |
 | 0:55–1:25 | "Show me my dream life." The face crosses into that side's light; ECHO speaks as that future self. Then "Show me the hard road", "Come back". Caption: *52-week simulation from your own goals. Scenarios, not predictions.* | Two short replies from different futures. |
-| 1:25–1:50 | Ghost mode: Project, then cut to the physical reflector with the floating face, talking. Close-up on the lips moving with Renée's voice. Caption: *Renée: Kokoro-82M on CPU, mouth driven by her real audio.* | One exchange spoken to the floating face. |
+| 1:25–1:50 | Ghost mode: Project, then cut to the physical reflector with the floating face, talking. Close-up on the lips moving with Reneė's voice. Caption: *Reneė: Kokoro-82M on CPU, mouth driven by her real audio.* | One exchange spoken to the floating face. |
 | 1:50–2:10 | The Lab: "Turn on the lab", "Yes", "Check in: slept six, energy three, stress four, forty minutes, done." The Lab panel shows rule, bandit and Nemotron side by side. | ECHO answers with tomorrow's call and why. |
 | 2:10–2:25 | "Export my data" (file downloads), "Delete all my data", "Yes". Caption: *Your photo never leaves the browser.* | ECHO confirms everything is gone. |
-| 2:25–2:40 | Back to the dark room, the floating face. End card: repo URL, *Built with NVIDIA Nemotron on Nebius Token Factory*, Personal AI track. | Renée: "See you on the other side." |
+| 2:25–2:40 | Back to the dark room, the floating face. End card: repo URL, *Built with NVIDIA Nemotron on Nebius Token Factory*, Personal AI track. | Reneė: "See you on the other side." |
 
 ## Recording notes
 

@@ -1,13 +1,13 @@
-# Renée TTS
+# Reneė TTS
 
-ECHO's voice: **Renée**, a British woman. This service wraps
+ECHO's voice: **Reneė**, a British woman. This service wraps
 [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) (open weights, Apache-2.0) with the
 British English voice `bf_emma`. NVIDIA's Magpie TTS models list no British English voice,
-so Renée uses Kokoro; Nemotron on Nebius Token Factory still does all of ECHO's thinking.
+so Reneė uses Kokoro; Nemotron on Nebius Token Factory still does all of ECHO's thinking.
 
 ## API
 
-- `GET /health` → `{"ok": true, "model": "hexgrad/Kokoro-82M", "voice": "bf_emma", "name": "Renée"}`
+- `GET /health` → `{"ok": true, "model": "hexgrad/Kokoro-82M", "voice": "bf_emma", "name": "Reneė"}`
 - `POST /synthesize` with `{"text": "Good evening.", "voice": "bf_emma", "speed": 1.0}` → `audio/wav` (24 kHz, 16-bit).
   Only British voices are accepted: `bf_emma` (default), `bf_isabella`, `bf_alice`, `bf_lily`.
   Send `Authorization: Bearer <RENEE_TTS_KEY>`. The service refuses to start without `RENEE_TTS_KEY`
@@ -46,7 +46,7 @@ npm --prefix apps/web run dev
 ```
 
 Open http://127.0.0.1:5186/ghost, choose a portrait, and start a session or use
-**Type instead**. The voice label says **Renée · British · Kokoro** only for the
+**Type instead**. The voice label says **Reneė · British · Kokoro** only for the
 service. A browser fallback names the browser voice. Restart the API after changing `.env`.
 
 ## Container / eventual hosting

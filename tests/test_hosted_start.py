@@ -1,4 +1,4 @@
-"""The hosted entrypoint (scripts/start-hosted.sh) wires Renée into the app inside one container.
+"""The hosted entrypoint (scripts/start-hosted.sh) wires Reneė into the app inside one container.
 
 A stand-in `uvicorn` on PATH records how each server is launched, so these tests run the real
 script without Kokoro or a network.

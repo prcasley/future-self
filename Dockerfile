@@ -1,7 +1,7 @@
 # The Other Side, hosted demo: one container serves the built web app, the API on $PORT, and
-# Renée's voice (Kokoro-82M on CPU) on loopback.
+# Reneė's voice (Kokoro-82M on CPU) on loopback.
 # Build: docker build -t the-other-side .
-#        docker build --build-arg RENEE_BUNDLED=0 -t the-other-side .   # without Renée (smaller)
+#        docker build --build-arg RENEE_BUNDLED=0 -t the-other-side .   # without Reneė (smaller)
 # Run:   docker run -p 8080:8080 -e NEBIUS_API_KEY=... -e DEMO_PASSWORD=... the-other-side
 
 FROM node:22-slim AS web
@@ -29,7 +29,7 @@ WORKDIR /app
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Renée: CPU-only torch, Kokoro, and the model + bf_emma voice fetched at build time so a cold
+# Reneė: CPU-only torch, Kokoro, and the model + bf_emma voice fetched at build time so a cold
 # start never downloads anything (HF_HUB_OFFLINE=1 at runtime).
 COPY services/renee-tts/requirements.txt services/renee-tts/app.py ./services/renee-tts/
 RUN if [ "$RENEE_BUNDLED" = "1" ]; then \

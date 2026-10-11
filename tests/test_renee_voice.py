@@ -1,4 +1,4 @@
-"""Renée's voice endpoint. The TTS service is mocked; these are contract tests, not audio evidence."""
+"""Reneė's voice endpoint. The TTS service is mocked; these are contract tests, not audio evidence."""
 
 import httpx
 import pytest
@@ -19,7 +19,7 @@ def test_not_deployed_is_explicit_and_health_says_browser(client):
     assert response.status_code == 503
     assert "browser" in response.json()["detail"]
     voice = client.get("/health").json()["voice"]
-    assert voice == {"name": "Renée", "accent": "British English", "engine": "browser"}
+    assert voice == {"name": "Reneė", "accent": "British English", "engine": "browser"}
 
 
 def test_forwards_to_kokoro_with_bf_emma_and_returns_audio(client, monkeypatch):

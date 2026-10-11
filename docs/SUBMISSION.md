@@ -30,7 +30,7 @@ Most goal apps are checklists. What actually changes behaviour is a conversation
 
 - **You talk, ECHO listens.** Speak your goals; ECHO keeps them and your stated facts, confirms changes out loud, and can undo. Each day it sizes one mission to your capacity.
 - **Your future self, floating.** ECHO is a photoreal living portrait that blinks, breathes and follows your head. Ghost mode puts it on pure black, mirrored for a glass or acrylic reflector or split four ways for a pyramid, so the face appears to hang in mid-air.
-- **Renée's voice.** ECHO speaks in a British woman's voice (Kokoro-82M on CPU), and the face's mouth moves with the loudness of her real audio.
+- **Reneė's voice.** ECHO speaks in a British woman's voice (Kokoro-82M on CPU), and the face's mouth moves with the loudness of her real audio.
 - **The Crossing.** "Show me my dream life", "what if I drift", "show me the hard road": ECHO simulates 52 weeks of your goals on that path and speaks to you as that future self, using only the simulated numbers, never invented events.
 - **The Lab.** An honest research instrument: from daily voice check-ins (sleep, energy, stress, minutes), a transparent rule, a learning bandit and Nemotron each recommend push, maintain or reduce; one is applied, all are logged and scored the next day.
 - **Your data, your call.** Photos never leave the browser. "Export my data" downloads everything; "delete all my data" plus a spoken yes erases it.
@@ -40,7 +40,7 @@ Most goal apps are checklists. What actually changes behaviour is a conversation
 - **Reasoning:** `nvidia/nemotron-3-super-120b-a12b` on **Nebius Token Factory** through its OpenAI-compatible API, streamed, with 14 server-validated tools (goals, memory corrections, missions, check-ins, crossings, export, delete). Thinking is disabled for voice latency.
 - **Where Nemotron is used:** conversation and tool calls, the session greeting, Crossing narration grounded in a deterministic simulator, the Lab's model policy (shadow), and a bounded projection of face proportions.
 - **Voice:** browser speech recognition in; Kokoro-82M (`bf_emma`, Apache-2.0) out, bundled on CPU in the same container: a warm sentence takes about 0.74 s on an 8-core desktop CPU, so no GPU is needed to host it.
-- **Face:** React and Three.js, with MediaPipe Face Mesh and Selfie Segmentation running on-device; the mouth is driven by an RMS envelope of Renée's decoded audio.
+- **Face:** React and Three.js, with MediaPipe Face Mesh and Selfie Segmentation running on-device; the mouth is driven by an RMS envelope of Reneė's decoded audio.
 - **Backend:** FastAPI and SQLite; one Docker container on Railway serves the page, the API and the voice behind a password, with daily model, voice and search budgets and a per-IP rate limit.
 - **Optional:** Tavily Search for related reading on a mission card, only on an explicit click.
 
@@ -52,7 +52,7 @@ Most goal apps are checklists. What actually changes behaviour is a conversation
 
 ## Accomplishments
 
-- A complete voice loop: speak, Nemotron reasons and calls tools, state commits, Renée answers, the ghost's lips move.
+- A complete voice loop: speak, Nemotron reasons and calls tools, state commits, Reneė answers, the ghost's lips move.
 - The Crossing's futures are reproducible simulations, labelled as scenarios, never predictions.
 - 145 backend tests, 59 web tests and the production build pass; every live claim in the README is backed by a real run.
 
@@ -71,7 +71,7 @@ nvidia-nemotron, nebius-token-factory, python, fastapi, sqlite, react, typescrip
 ## Testing instructions (for judges)
 
 1. Open `[Railway URL]` in Chrome or Edge on a computer with a microphone. Sign in with username `judge` and password `[password]`.
-2. Click **Start session** and allow the microphone. ECHO greets you (a live Nemotron call) in Renée's voice.
+2. Click **Start session** and allow the microphone. ECHO greets you (a live Nemotron call) in Reneė's voice.
 3. Say "My goal is to learn Python", then "What is my mission?", then "Show me my dream life" and "Come back".
 4. Click **Ghost mode** to see the Pepper's ghost stage; **Project** hides the controls, **Esc** brings them back.
 5. Optional: tap **Photo** to use your own face (it never leaves the browser), then say "scan my face".

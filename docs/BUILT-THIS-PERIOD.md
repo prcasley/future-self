@@ -6,7 +6,7 @@ period opened on August 26, 2026; this repository's first commit is September 22
 (third-party models and libraries keep their own licenses). Git history is the complete
 record; this file is a dated log of the larger steps, newest additions at the end.
 
-## 2026-10-11 — Renée on a real local CPU
+## 2026-10-11 — Reneė on a real local CPU
 
 - Ran the existing Kokoro `bf_emma` service for the first real audio test. Added a
   Windows venv launcher, bundled eSpeak support, explicit CPU execution and bounded
@@ -34,7 +34,7 @@ Tavily has no configured key. Do not claim a real Tavily search or bonus qualifi
 until a runtime call succeeds with a key. The user wants this deferred dependency
 clearly called out; no key should be pasted into chat or committed.
 
-## 2026-10-11 — Mouth follows Renée's real audio
+## 2026-10-11 — Mouth follows Reneė's real audio
 
 - Decode the returned WAV into 10 ms energy windows and sample them at the audio
   element's actual playback position. Smooth attack/release follows syllable volume
