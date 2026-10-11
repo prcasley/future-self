@@ -18,6 +18,7 @@ import {
 } from "./living/gallery";
 import { normalizePhoto } from "./avatar/preparePortrait";
 import { FaceScan } from "./scan/FaceScan";
+import { createRenee, describe as describeVoice, fetchReneeAudio } from "./voice/renee";
 import "./style.css";
 
 // Photo commands are handled here, in the browser, so the photo never reaches the server.
@@ -91,6 +92,17 @@ function App() {
     verified_at: string;
   } | null>(null);
   const runtimeRef = useRef(false);
+  // Renée, ECHO's British voice. The label always names the engine actually speaking.
+  const [voiceLabel, setVoiceLabel] = useState("Voice: Renée · British");
+  const finishSpeaking = useRef<() => void>(() => {});
+  const renee = useRef<ReturnType<typeof createRenee> | null>(null);
+  if (!renee.current)
+    renee.current = createRenee({
+      onIdle: () => finishSpeaking.current(),
+      onEngine: (engine) => setVoiceLabel(describeVoice(engine)),
+      fetchAudio: fetchReneeAudio,
+    });
+  const stopVoice = () => renee.current?.cancel();
   const portraitRef = useRef<string | null>(null);
   portraitRef.current = portrait;
   const fileInput = useRef<HTMLInputElement>(null);
@@ -152,7 +164,7 @@ function App() {
       enabled.current = false;
       recognition.current?.abort();
       controller.current?.abort();
-      speechSynthesis.cancel();
+      stopVoice();
     };
   }, []);
   useEffect(() => {
@@ -311,11 +323,9 @@ function App() {
         : "ECHO is speaking · tap Interrupt ECHO to speak",
     );
     const speechGeneration = generation.current;
-    const utterance = new SpeechSynthesisUtterance(text);
     const voice = VOICES[sideRef.current || "home"] || VOICES.home;
-    utterance.rate = voice.rate;
-    utterance.pitch = voice.pitch;
-    utterance.onend = utterance.onerror = () => {
+    // Listening resumes once, when Renée has finished every queued sentence.
+    finishSpeaking.current = () => {
       if (speechGeneration !== generation.current) return;
       speaking.current = false;
       setTalking(false);
@@ -324,14 +334,14 @@ function App() {
         listen();
       }
     };
-    speechSynthesis.speak(utterance);
+    renee.current?.say(text, voice.rate, voice.pitch);
   };
   const submit = async (text: string, spoken = true) => {
     const id = ++generation.current;
     busy.current = true;
     recognition.current?.abort();
     controller.current?.abort();
-    speechSynthesis.cancel();
+    stopVoice();
     speaking.current = false;
     if (spoken) setHeard(text);
     setTalking(false);
@@ -463,7 +473,7 @@ function App() {
       controller.current?.abort();
       controller.current = null;
       recognition.current?.abort();
-      speechSynthesis.cancel();
+      stopVoice();
       speaking.current = false;
       setTalking(false);
       setStatus("Session ended");
@@ -550,7 +560,7 @@ function App() {
     busy.current = false;
     controller.current?.abort();
     controller.current = null;
-    speechSynthesis.cancel();
+    stopVoice();
     speaking.current = false;
     setTalking(false);
     if (enabled.current) {
@@ -616,6 +626,7 @@ function App() {
         }}
       >
         <p className="runtime-proof">{runtimeLabel}</p>
+        <p className="runtime-proof voice-proof">{voiceLabel}</p>
         <TypeInstead onSubmit={(text) => submit(text)} onToggle={typedToggle} />
       </GhostMode>
     );
@@ -641,7 +652,7 @@ function App() {
               setMuted(value);
               mutedRef.current = value;
               if (value) {
-                speechSynthesis.cancel();
+                stopVoice();
                 speaking.current = false;
                 setTalking(false);
                 if (enabled.current && !busy.current) setStatus("Listening");
@@ -719,6 +730,7 @@ function App() {
               SCENARIO, NOT PREDICTION · PHOTO AND CAMERA STAY ON THIS DEVICE
             </span>
             <p className="runtime-proof">{runtimeLabel}</p>
+        <p className="runtime-proof voice-proof">{voiceLabel}</p>
           </div>
         </section>
         <aside>

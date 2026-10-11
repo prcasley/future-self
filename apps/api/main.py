@@ -78,6 +78,11 @@ class Settings(BaseSettings):
     future_image_model: str = ""
     future_image_endpoint: str = ""
     future_image_endpoint_key: str = ""
+    # Renée, ECHO's British voice: a Kokoro TTS service (services/renee-tts) on Nebius Serverless.
+    # Empty = not deployed; the browser's British female voice is used and the UI says so.
+    renee_tts_url: str = ""
+    renee_tts_key: str = ""
+    renee_tts_voice: str = "bf_emma"
 
 
 settings = Settings()
@@ -520,6 +525,11 @@ def health():
         "audio": "browser_asr",
         "model": settings.nebius_super_model,
         "sandboxes": bool(settings.nebius_project_id),
+        "voice": {
+            "name": "Renée",
+            "accent": "British English",
+            "engine": "kokoro-nebius" if settings.renee_tts_url else "browser",
+        },
         "scope": "hosted-demo" if settings.demo_password else "local-single-user",
         "budget": {
             "model_daily_cap": settings.model_daily_cap,
@@ -701,6 +711,34 @@ async def connect_voice(body: SessionStart):
             "model": settings.nebius_super_model,
             "verified_at": datetime.now(timezone.utc).isoformat(),
         }, headers={"Cache-Control": "no-store"})
+
+
+class SpeechRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    text: str = Field(min_length=1, max_length=600)
+    speed: float = Field(default=1.0, ge=0.7, le=1.3)
+
+
+@app.post("/voice/tts")
+async def renee_tts(body: SpeechRequest):
+    """Renée's voice. Forwards one sentence to the Kokoro service on Nebius and returns WAV audio."""
+    if not settings.renee_tts_url:
+        raise HTTPException(503, "Renée's voice service isn't deployed, so this browser's British voice is used.")
+    headers = {"Authorization": f"Bearer {settings.renee_tts_key}"} if settings.renee_tts_key else {}
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            upstream = await client.post(
+                settings.renee_tts_url.rstrip("/") + "/synthesize",
+                json={"text": body.text, "voice": settings.renee_tts_voice, "speed": body.speed},
+                headers=headers,
+            )
+        upstream.raise_for_status()
+    except (httpx.HTTPError, TimeoutError):
+        raise HTTPException(503, "Renée's voice service didn't answer, so this browser's British voice is used.") from None
+    if not upstream.content or not upstream.headers.get("content-type", "").startswith("audio/"):
+        raise HTTPException(503, "Renée's voice service returned no audio.")
+    return Response(upstream.content, media_type=upstream.headers["content-type"],
+                    headers={"Cache-Control": "no-store"})
 
 
 @app.post("/voice/text_turn")

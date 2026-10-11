@@ -1,0 +1,52 @@
+"""Renée: ECHO's British voice.
+
+A tiny TTS service around Kokoro-82M (open weights, Apache-2.0) with the British English
+female voice bf_emma. Deploy it as a Nebius Serverless Endpoint (see README.md); the main
+API forwards one sentence at a time to POST /synthesize.
+"""
+
+import io
+import os
+
+import numpy as np
+import soundfile as sf
+from fastapi import FastAPI, Header, HTTPException
+from fastapi.responses import Response
+from kokoro import KPipeline
+from pydantic import BaseModel, ConfigDict, Field
+
+VOICES = {"bf_emma", "bf_isabella", "bf_alice", "bf_lily"}  # British English women
+DEFAULT_VOICE = os.environ.get("RENEE_VOICE", "bf_emma")
+API_KEY = os.environ.get("RENEE_TTS_KEY", "")
+SAMPLE_RATE = 24000
+
+app = FastAPI(title="Renée TTS")
+pipeline = KPipeline(lang_code="b")  # "b" = British English
+pipeline.load_voice(DEFAULT_VOICE)  # warm up so the first sentence isn't slow
+
+
+class Speech(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    text: str = Field(min_length=1, max_length=600)
+    voice: str = DEFAULT_VOICE
+    speed: float = Field(default=1.0, ge=0.7, le=1.3)
+
+
+@app.get("/health")
+def health():
+    return {"ok": True, "model": "hexgrad/Kokoro-82M", "voice": DEFAULT_VOICE, "name": "Renée"}
+
+
+@app.post("/synthesize")
+def synthesize(body: Speech, authorization: str = Header(default="")):
+    if API_KEY and authorization != f"Bearer {API_KEY}":
+        raise HTTPException(401, "Missing or wrong key.")
+    if body.voice not in VOICES:
+        raise HTTPException(400, f"Renée only speaks with a British voice: {sorted(VOICES)}")
+    chunks = [audio for _, _, audio in pipeline(body.text, voice=body.voice, speed=body.speed)]
+    if not chunks:
+        raise HTTPException(422, "Nothing to say.")
+    wav = io.BytesIO()
+    sf.write(wav, np.concatenate([np.asarray(c, dtype=np.float32) for c in chunks]), SAMPLE_RATE,
+             format="WAV", subtype="PCM_16")
+    return Response(wav.getvalue(), media_type="audio/wav", headers={"Cache-Control": "no-store"})
