@@ -97,12 +97,21 @@ function App() {
   const [ghostConfig, updateGhostConfig] = useGhostConfig();
   const [runtime, setRuntime] = useState<
     | { model: string; verified_at: string }
-    | { limited: "budget" | "credit" }
+    | { limited: "budget" | "credit" | "offline" }
     | null
   >(null);
   const runtimeRef = useRef(false);
+  // While limited, re-check the model at most every two minutes (a budget reset or Nebius
+  // coming back), not before every turn.
+  const limitedAt = useRef(0);
+  // No browser speech recognition (Safari, Firefox): point to typing instead of "Listening".
+  const noSpeech = useRef(false);
+  const listeningText = () =>
+    noSpeech.current
+      ? "Voice input isn't available in this browser. Use Type instead, or open this page in Chrome or Edge."
+      : "Listening";
   // Renée, ECHO's British voice. The label always names the engine actually speaking.
-  const [voiceLabel, setVoiceLabel] = useState("Voice: Renée · British");
+  const [voiceLabel, setVoiceLabel] = useState("Voice: Renée · checking");
   const finishSpeaking = useRef<() => void>(() => {});
   const speechLevel = useRef<number | null>(0);
   const renee = useRef<ReturnType<typeof createRenee> | null>(null);
@@ -326,7 +335,7 @@ function App() {
   const speak = (text: string) => {
     setSaid(text);
     if (mutedRef.current) {
-      setStatus("Listening");
+      setStatus(listeningText());
       listen();
       return;
     }
@@ -346,7 +355,7 @@ function App() {
       speaking.current = false;
       setTalking(false);
       if (enabled.current) {
-        setStatus("Listening");
+        setStatus(listeningText());
         listen();
       }
     };
@@ -380,7 +389,10 @@ function App() {
     // An outfit only shows on the portrait; without a photo, say how to add one.
     let hint = "";
     try {
-      if (!runtimeRef.current) {
+      if (
+        !runtimeRef.current &&
+        (text === "start my day" || Date.now() - limitedAt.current > 120_000)
+      ) {
         const response = await fetch("/api/voice/connect", {
           method: "POST",
           signal: abort.signal,
@@ -402,6 +414,7 @@ function App() {
           // Over today's AI budget, or Nebius refused the key or credit. The session still opens
           // without the model and built-in commands keep working; nothing claims to be live, and
           // the next turn checks again in case the budget has reset.
+          limitedAt.current = Date.now();
           setRuntime({ limited: connected.limited });
         } else {
           throw new Error(
@@ -476,7 +489,7 @@ function App() {
               typing.current
                 ? "Ready for your message"
                 : enabled.current
-                  ? "Listening"
+                  ? listeningText()
                   : "Session ended",
             );
           listen();
@@ -512,6 +525,7 @@ function App() {
       (window as any).SpeechRecognition ||
       (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
+      noSpeech.current = true;
       enabled.current = true;
       setRunning(true);
       void submit("start my day", false);
@@ -566,7 +580,7 @@ function App() {
     };
     enabled.current = true;
     setRunning(true);
-    setStatus("Listening");
+    setStatus(listeningText());
     try {
       if (!typing.current) rec.start();
       void submit("start my day", false);
@@ -587,7 +601,7 @@ function App() {
     speaking.current = false;
     setTalking(false);
     if (enabled.current) {
-      setStatus("Listening");
+      setStatus(listeningText());
       listen();
     }
     fetch("/api/state/" + session)
@@ -631,7 +645,9 @@ function App() {
     : "limited" in runtime
       ? runtime.limited === "budget"
         ? "Today's AI budget is used · built-in commands still work"
-        : "Nebius refused the request · built-in commands still work"
+        : runtime.limited === "credit"
+          ? "Nebius refused the request · built-in commands still work"
+          : "AI model unreachable · built-in commands still work"
       : `Live Nebius session · ${runtime.model} · verified ${new Date(runtime.verified_at).toLocaleTimeString()}`;
   if (ghost)
     return (
@@ -683,7 +699,7 @@ function App() {
                 stopVoice();
                 speaking.current = false;
                 setTalking(false);
-                if (enabled.current && !busy.current) setStatus("Listening");
+                if (enabled.current && !busy.current) setStatus(listeningText());
                 listen();
               }
             }}
@@ -790,7 +806,8 @@ function App() {
               <h2>A visible footprint.</h2>
               <p>
                 Prompts go to Nebius. Browser recognition may process audio with
-                its provider. This prototype stores goals on this computer. Your
+                its provider. Your goals, memories and check-ins are stored by the
+                server that runs this app (this computer when run locally). Your
                 device-only Photo stays in this browser; say “forget my photo”
                 to delete it. Preview your future self has a separate, consented
                 photo request when an image service is configured. The face scan
@@ -921,7 +938,6 @@ function App() {
           )}
           <div className="try">
             <div className="eyebrow">TRY SAYING</div>
-            <p>“I want to build my first app.”</p>
             <p>“My goal is to learn Python.” · “What is my mission?”</p>
             <p>“Mission complete.” · “Remind me daily at 9 AM.”</p>
             <p>“Show me my dream life.” · “What if I drift?”</p>
@@ -930,7 +946,6 @@ function App() {
               four, forty minutes, done.”
             </p>
             <p>“That was too much.” · “Come back.” · “Undo that.”</p>
-            <p>“Show me my dream life.” · “What if I drift?”</p>
             <p>“Follow my head.” · “Hologram mode.” · “Real mode.”</p>
             <p>“Scan my face.” · “Close.”</p>
             <p>“Export my data.” · “Delete all my data.”</p>
@@ -961,9 +976,13 @@ function App() {
       <footer>
         <span>VOICE FIRST. ALWAYS YOUR CHOICE.</span>
         <span>
-          {configured
-            ? "NEBIUS CONNECTED · LOCAL PROTOTYPE"
-            : "LOCAL PROTOTYPE · API NOT CONFIGURED"}
+          {runtime && "model" in runtime
+            ? "LIVE · NVIDIA NEMOTRON ON NEBIUS"
+            : runtime
+              ? "LIMITED SESSION · NO LIVE MODEL"
+              : configured
+                ? "NEBIUS CONFIGURED · NOT CONNECTED YET"
+                : "API NOT CONFIGURED"}
         </span>
       </footer>
     </main>

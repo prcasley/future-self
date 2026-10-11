@@ -56,9 +56,10 @@ def test_connect_failure_never_claims_live_or_saves_a_fake_greeting(setup, monke
 
     monkeypatch.setattr(main, "model_turn", model)
     response = client.post("/voice/connect", json={"session_id": session})
-    assert response.status_code == 503
+    assert response.status_code == 503 and response.json()["limited"] == "offline"
     assert "verified_at" not in response.text and "sensitive" not in response.text
-    assert main.store.load(session) == before
+    after = main.store.load(session)
+    assert after["goals"] == before["goals"] and after["history"] == before["history"]
 
 
 def test_connect_missing_key_budget_and_busy_are_explicit(setup, monkeypatch):
@@ -111,3 +112,26 @@ def test_refused_key_or_credit_opens_a_limited_session_with_its_own_message(setu
     turn = client.post("/voice/text_turn", json={"session_id": session, "text": "talk to me about anything"})
     assert "Nebius refused the request" in turn.text  # its own message, not the generic error
     assert "could not finish that request" not in turn.text
+
+
+def test_no_model_still_opens_a_limited_session_with_built_in_commands(setup, monkeypatch):
+    client, session = setup
+    monkeypatch.setattr(main.settings, "nebius_api_key", "")
+    opened = client.post("/voice/connect", json={"session_id": session})
+    assert opened.status_code == 503
+    assert opened.json()["limited"] == "offline" and opened.json()["greeting"] == main.OFFLINE_MESSAGE
+    reply = client.post("/voice/text_turn", json={"session_id": session, "text": "My goal is to learn Python"})
+    assert reply.status_code == 200 and main.store.load(session)["goals"]
+
+
+def test_a_limited_recheck_keeps_a_pending_confirmation(setup, monkeypatch):
+    client, session = setup
+    monkeypatch.setattr(main, "allow_model", lambda session: False)
+    client.post("/voice/text_turn", json={"session_id": session, "text": "My goal is to learn Python"})
+    client.post("/voice/text_turn", json={"session_id": session, "text": "Delete all my data"})
+    assert main.store.load(session)["pending"]
+    # The limited client re-checks the model before the next turn; "yes" must still delete.
+    assert client.post("/voice/connect", json={"session_id": session}).json()["limited"] == "budget"
+    assert main.store.load(session)["pending"]
+    client.post("/voice/text_turn", json={"session_id": session, "text": "yes"})
+    assert main.store.load(session)["goals"] == {}

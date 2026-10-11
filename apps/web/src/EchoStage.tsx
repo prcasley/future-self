@@ -6,6 +6,10 @@ import type { LivingState } from "./living/LivingPortrait";
 import type { MirrorState } from "./living/tracker";
 import "./EchoStage.css";
 
+// An AI-generated portrait of the project's author, published with his consent (docs/ghost/README.md),
+// so judges see ECHO's face before choosing their own.
+const DEMO_FACE = new URL("./assets/demo-face.jpg", import.meta.url).href;
+
 /** The main stage uses exactly the display renderer used by /ghost. */
 export function EchoStage({
   imageUrl,
@@ -27,6 +31,16 @@ export function EchoStage({
   const [state, setState] = useState<LivingState>("loading");
   const [detail, setDetail] = useState("");
   const [camera, setCamera] = useState<MirrorState>("off");
+  const [loadingDemo, setLoadingDemo] = useState(false);
+  const applyDemoFace = async () => {
+    setLoadingDemo(true);
+    try {
+      const blob = await (await fetch(DEMO_FACE)).blob();
+      onPhoto(new File([blob], "demo-face.jpg", { type: "image/jpeg" }));
+    } finally {
+      setLoadingDemo(false);
+    }
+  };
   const choose = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
@@ -67,9 +81,14 @@ export function EchoStage({
             onChange={choose}
           />
         </label>
+        {!imageUrl && (
+          <button type="button" disabled={loadingDemo} onClick={() => void applyDemoFace()}>
+            Use the demo face
+          </button>
+        )}
         <span role="status">
           {!imageUrl
-            ? "Choose a portrait. Your photo stays on this device."
+            ? "Use the demo face, or choose your own portrait. Your photo stays on this device."
             : state === "ready"
               ? `ECHO · ${mode}`
               : detail || "Preparing portrait…"}

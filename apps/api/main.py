@@ -111,16 +111,25 @@ BUDGET_GREETING = (
     "midnight UTC. Built-in commands still work: say “what is my mission”, “recap”, “show me my "
     "dream life”, “scan my face” or “export my data”."
 )
+OFFLINE_MESSAGE = (
+    "I can't reach the AI model right now, so free conversation is paused. Built-in commands still "
+    "work: say “what is my mission”, “recap”, “show me my dream life”, “scan my face” or “export my data”."
+)
 CREDIT_MESSAGE = (
     "Nebius refused the request, which usually means the demo's AI credit or key needs attention. "
     "Built-in commands still work, like “what is my mission”, “recap” and “export my data”."
 )
 
 
-def limited_session(session, state, reason):
-    """Start a session without the model: the local planner still runs and built-in commands work."""
+def limited_session(session, state, reason, pending=None):
+    """Start a session without the model: the local planner still runs and built-in commands work.
+
+    A limited client re-checks the model from time to time; a pending yes/no confirmation (like
+    "delete all my data") must survive that re-check.
+    """
+    state["pending"] = pending
     store.save(session, state)
-    message = BUDGET_GREETING if reason == "budget" else CREDIT_MESSAGE
+    message = {"budget": BUDGET_GREETING, "credit": CREDIT_MESSAGE}.get(reason, OFFLINE_MESSAGE)
     return JSONResponse(
         status_code=429 if reason == "budget" else 503,
         content={"detail": message, "greeting": message, "limited": reason, "state": public(state)},
@@ -793,19 +802,21 @@ class SessionStart(BaseModel):
 async def connect_voice(body: SessionStart):
     """A useful real Nemotron greeting, never a mock or a configuration-only green badge."""
     session = str(body.session_id)
-    if not settings.nebius_api_key or not settings.nebius_super_model.lower().startswith("nvidia/"):
-        raise HTTPException(503, "Configure an NVIDIA Nemotron model on Nebius Token Factory.")
     if locks[session].locked():
         raise HTTPException(409, "A turn is already running. Please try again.")
     async with locks[session]:
         state = store.load(session)
         if body.timezone and daily.valid_timezone(body.timezone):
             state["timezone"] = body.timezone
+        pending = state["pending"]
         # Prepare the mission in memory; persist only after a successful provider response.
         opening = act(state, "open_day", {})
+        if not settings.nebius_api_key or not settings.nebius_super_model.lower().startswith("nvidia/"):
+            # No model configured: open without it rather than leaving the judge on a dead page.
+            return limited_session(session, state, "offline", pending)
         if not allow_model(session):
             # Over budget: no model call, no "live" claim, but the session still opens.
-            return limited_session(session, state, "budget")
+            return limited_session(session, state, "budget", pending)
         try:
             result = await model_turn(
                 state,
@@ -818,11 +829,11 @@ async def connect_voice(body: SessionStart):
             if not greeting:
                 raise ValueError("empty greeting")
         except RuntimeError as error:
-            if str(error) == "provider_rejected":
-                return limited_session(session, state, "credit")
-            raise HTTPException(503, "Nebius could not complete the live session greeting. Try again.") from None
+            reason = {"provider_rejected": "credit", "daily_budget": "budget"}.get(str(error), "offline")
+            return limited_session(session, state, reason, pending)
         except (httpx.HTTPError, TimeoutError, ValueError):
-            raise HTTPException(503, "Nebius could not complete the live session greeting. Try again.") from None
+            # Nebius is down, slow or returned nothing: the session still opens without it.
+            return limited_session(session, state, "offline", pending)
         store.save(session, state)
         return JSONResponse({
             "greeting": greeting,
@@ -1004,6 +1015,7 @@ async def text_turn(turn: Turn):
                 text = {
                     "daily_budget": BUDGET_MESSAGE,
                     "provider_rejected": CREDIT_MESSAGE,
+                    "missing_key": OFFLINE_MESSAGE,
                 }.get(reason, "I could not finish that request. Please try again. Your saved goals are still here.")
                 yield event("error", {"text": text})
             yield event("done", {})
