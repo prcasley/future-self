@@ -10,7 +10,21 @@ type Result = {
 };
 
 /** Deliberately separate from the device-only photo and scan flows. */
-export function FuturePortrait({ session }: { session: string }) {
+function toBlob(b64: string, mime: string): Blob {
+  const bytes = atob(b64);
+  const out = new Uint8Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) out[i] = bytes.charCodeAt(i);
+  return new Blob([out], { type: mime });
+}
+
+export function FuturePortrait({
+  session,
+  onUse,
+}: {
+  session: string;
+  /** Keep a generated portrait as the face ECHO wears on that side (device only). */
+  onUse?: (side: string, blob: Blob) => void;
+}) {
   const [config, setConfig] = useState<Config | null>(null);
   const [side, setSide] = useState("dream");
   const [file, setFile] = useState<File | null>(null);
@@ -237,6 +251,20 @@ export function FuturePortrait({ session }: { session: string }) {
                 />
               </div>
             ))}
+          {result.image_b64 && onUse && (
+            <div className="portrait-actions">
+              <button
+                onClick={() =>
+                  onUse(
+                    side,
+                    toBlob(result.image_b64!, result.mime_type || "image/png"),
+                  )
+                }
+              >
+                Use as my {side === "neutral" ? "drift" : side} face
+              </button>
+            </div>
+          )}
           {result.image_b64 && (
             <p>
               {result.identity_requested

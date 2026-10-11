@@ -1,13 +1,21 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { GhostMode, useGhostRoute } from "./ghost/GhostMode";
 import { createRoot } from "react-dom/client";
-import { Hologram } from "./Hologram";
+import { EchoStage } from "./EchoStage";
+import { useGhostConfig } from "./ghost/useGhostConfig";
 import { TypeInstead } from "./TypeInstead";
 import { FuturePortrait } from "./FuturePortrait";
 import { LabPanel, OtherSidePanel, SIDE_LABELS } from "./Panels";
 import { downloadExport, turn, type EchoState } from "./api";
-import { PortraitAvatar } from "./avatar/PortraitAvatar";
 import { forgetPhoto, loadPhoto, savePhoto } from "./avatar/photoStore";
+import {
+  forgetSidePortraits,
+  loadGallery,
+  releaseGallery,
+  saveSidePortrait,
+  type Gallery,
+  type Side,
+} from "./living/gallery";
 import { normalizePhoto } from "./avatar/preparePortrait";
 import { FaceScan } from "./scan/FaceScan";
 import "./style.css";
@@ -21,6 +29,14 @@ const SCAN =
   /\b(scan (my )?face|face scan|scan me|golden ratio|phi scan|map my face)\b/i;
 const CLOSE_SCAN =
   /^\s*(close( it| the scan)?|done|that's enough|exit|hide (it|the scan))\s*[.!]?\s*$/i;
+// Stage commands, also local: how ECHO looks and whether it follows your head.
+const FOLLOW_ON =
+  /\b(follow (me|my head)|mirror me|track my (head|face)|look at me)\b/i;
+const FOLLOW_OFF = /\b(stop (following|mirroring|tracking)|don't follow)\b/i;
+const LOOK_HOLOGRAM =
+  /\b(hologram (mode|look)|show (me )?the hologram|go holographic)\b/i;
+const LOOK_REAL =
+  /\b(real (mode|look|face)|show (me )?the real (you|face)|photoreal|be real)\b/i;
 
 const empty: EchoState = {
   daily: { mission: null, schedule: null, messages: [] },
@@ -67,6 +83,14 @@ function App() {
   const [talking, setTalking] = useState(false);
   const [portrait, setPortrait] = useState<string | null>(null);
   const [portraitEpoch, setPortraitEpoch] = useState(0);
+  // The future gallery (one face per side), how ECHO looks, and the camera mirror.
+  const [gallery, setGallery] = useState<Gallery>({});
+  const [ghostConfig, updateGhostConfig] = useGhostConfig();
+  const [runtime, setRuntime] = useState<{
+    model: string;
+    verified_at: string;
+  } | null>(null);
+  const runtimeRef = useRef(false);
   const portraitRef = useRef<string | null>(null);
   portraitRef.current = portrait;
   const fileInput = useRef<HTMLInputElement>(null);
@@ -155,6 +179,41 @@ function App() {
     },
     [portrait],
   );
+  const refreshGallery = async () => {
+    const next = await loadGallery().catch(() => ({ urls: {} as Gallery }));
+    setGallery((previous) => {
+      releaseGallery(previous);
+      return next.urls;
+    });
+  };
+  useEffect(() => {
+    void refreshGallery();
+  }, []);
+  const setSidePortrait = async (side: Side, file: File) => {
+    try {
+      const blob = await normalizePhoto(file);
+      const persisted = await saveSidePortrait(side, blob);
+      await refreshGallery();
+      setStatus(
+        persisted
+          ? `ECHO wears this face on the ${side === "home" ? "present" : side} side. It stays on this device.`
+          : "Face set for this visit. Browser storage is unavailable, so it may not survive a reload.",
+      );
+    } catch {
+      setStatus(
+        "I couldn't read that picture. Try a JPG or PNG with a clear face.",
+      );
+    }
+  };
+  const useGeneratedPortrait = async (side: Side, blob: Blob) => {
+    const persisted = await saveSidePortrait(side, blob);
+    await refreshGallery();
+    setStatus(
+      persisted
+        ? `Your ${side} future now speaks with that face. It stays on this device.`
+        : "Face set for this visit only; browser storage is unavailable.",
+    );
+  };
   const choosePhoto = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
@@ -180,14 +239,32 @@ function App() {
   };
   /** Photo commands never go to the server: the photo lives only in this browser. */
   const photoCommand = async (text: string): Promise<string | null> => {
+    if (FOLLOW_ON.test(text)) {
+      updateGhostConfig({ follow: true });
+      return "Following your head. The camera stays on this device.";
+    }
+    if (FOLLOW_OFF.test(text)) {
+      updateGhostConfig({ follow: false });
+      return "Camera off. I'll hold still.";
+    }
+    if (LOOK_HOLOGRAM.test(text)) {
+      setGhost(true);
+      return "Ghost projection. Tap or press Escape for controls.";
+    }
+    if (LOOK_REAL.test(text)) {
+      setGhost(false);
+      return "Back to the main stage. Same living face.";
+    }
     if (FORGET_PHOTO.test(text)) {
       setPortraitEpoch((value) => value + 1);
-      const removed = await forgetPhoto();
+      const removedFutures = await forgetSidePortraits();
+      await refreshGallery();
+      const removed = (await forgetPhoto()) && removedFutures;
       setScanOpen(false);
       setPortrait(null);
       if (!removed)
         return "I've hidden your photo for this visit, but couldn't confirm deletion from browser storage. Please clear this site's data in browser settings to remove any saved copy.";
-      return "Done. Your photo is gone from this device, and I'm back to my own face.";
+      return "Done. Your photo is gone from this device, Choose another photo when you are ready.";
     }
     if (SCAN.test(text)) {
       if (!portraitRef.current)
@@ -277,6 +354,33 @@ function App() {
     // An outfit only shows on the portrait; without a photo, say how to add one.
     let hint = "";
     try {
+      if (!runtimeRef.current) {
+        const response = await fetch("/api/voice/connect", {
+          method: "POST",
+          signal: abort.signal,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            session_id: session,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          }),
+        });
+        if (!response.ok)
+          throw new Error(
+            "Nebius connection failed. No live model session was established. Try Start session again.",
+          );
+        const connected = await response.json();
+        if (id !== generation.current) return false;
+        runtimeRef.current = true;
+        setRuntime({
+          model: connected.model,
+          verified_at: connected.verified_at,
+        });
+        setState(connected.state);
+        if (text === "start my day") {
+          speak(connected.greeting);
+          return true;
+        }
+      }
       for await (const item of turn(session, text, abort.signal)) {
         if (id !== generation.current) return;
         if (item.event === "token") {
@@ -291,6 +395,7 @@ function App() {
             setPortraitEpoch((value) => value + 1);
             setScanOpen(false);
             setPortrait(null);
+            void forgetSidePortraits().then(() => refreshGallery());
             void forgetPhoto().then((removed) => {
               if (!removed)
                 setStatus(
@@ -317,6 +422,11 @@ function App() {
       }
     } catch (error) {
       failed = true;
+      if (!runtimeRef.current && id === generation.current) {
+        enabled.current = false;
+        setRunning(false);
+        recognition.current?.abort();
+      }
       if (!abort.signal.aborted)
         setStatus(
           error instanceof Error
@@ -346,6 +456,8 @@ function App() {
     if (enabled.current) {
       enabled.current = false;
       setRunning(false);
+      runtimeRef.current = false;
+      setRuntime(null);
       ++generation.current;
       busy.current = false;
       controller.current?.abort();
@@ -358,16 +470,18 @@ function App() {
       return;
     }
     if (!window.isSecureContext) {
-      setStatus("Microphone access needs the secure HTTPS app link. A desktop LAN address over HTTP will not work on your phone.");
+      setStatus(
+        "Microphone access needs the secure HTTPS app link. A desktop LAN address over HTTP will not work on your phone.",
+      );
       return;
     }
     const SpeechRecognition =
       (window as any).SpeechRecognition ||
       (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      setStatus(
-        "This browser does not provide speech recognition. Try Safari on iPhone or Chrome on Android using the HTTPS app link. Device support still needs a live test.",
-      );
+      enabled.current = true;
+      setRunning(true);
+      void submit("start my day", false);
       return;
     }
     const rec = new SpeechRecognition();
@@ -464,26 +578,46 @@ function App() {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, []);
-  const presenceMode = !running
-    ? "idle"
-    : talking || speaking.current
+  const presenceMode =
+    talking || speaking.current
       ? "speaking"
       : busy.current
         ? "thinking"
-        : "listening";
+        : running
+          ? "listening"
+          : "idle";
+  const activeSide = (state.side || "home") as Side;
+  const activePortrait = gallery[activeSide] || gallery.home || portrait;
+  const typedToggle = (open: boolean) => {
+    typing.current = open;
+    if (open) recognition.current?.abort();
+    else listen();
+  };
+  const runtimeLabel = runtime
+    ? `Live Nebius session · ${runtime.model} · verified ${new Date(runtime.verified_at).toLocaleTimeString()}`
+    : "Not connected to Nebius yet";
   if (ghost)
     return (
       <GhostMode
         key={portraitEpoch}
-        resumeLiving
-        imageUrl={portrait}
+        imageUrl={activePortrait}
+        config={ghostConfig}
+        onConfig={updateGhostConfig}
+        onPhoto={(file) => void setSidePortrait(activeSide, file)}
+        onControlsChange={() => typedToggle(false)}
         mode={presenceMode}
         running={running}
         onSession={start}
         onInterrupt={interrupt}
         status={status}
-        onExit={() => setGhost(false)}
-      />
+        onExit={() => {
+          typedToggle(false);
+          setGhost(false);
+        }}
+      >
+        <p className="runtime-proof">{runtimeLabel}</p>
+        <TypeInstead onSubmit={(text) => submit(text)} onToggle={typedToggle} />
+      </GhostMode>
     );
   return (
     <main>
@@ -495,7 +629,11 @@ function App() {
           <button className="primary" onClick={start}>
             {running ? "End session" : "Start session"}
           </button>
-          {running && <button className="interrupt-echo" onClick={interrupt}>Interrupt ECHO</button>}
+          {running && (
+            <button className="interrupt-echo" onClick={interrupt}>
+              Interrupt ECHO
+            </button>
+          )}
           <button
             aria-pressed={muted}
             onClick={() => {
@@ -559,7 +697,6 @@ function App() {
       />
       <div className="stage">
         <section className="presence">
-          <button type="button" onClick={() => setGhost(true)}>Ghost mode</button>
           <div className="stage-label">
             <span className={running ? "light live" : "light"} />
             {state.side
@@ -568,44 +705,30 @@ function App() {
                 ? "SESSION ACTIVE"
                 : "ECHO · STANDING BY"}
           </div>
-          {portrait ? (
-            <PortraitAvatar
-              active={running}
-              side={state.side}
-              portraitUrl={portrait}
-              appearance={state.appearance}
-              mode={presenceMode}
-              onPrepared={(ok) => {
-                if (!ok)
-                  setStatus("I couldn't read that photo. Try a JPG or PNG.");
-              }}
-            />
-          ) : (
-            <Hologram
-              active={running}
-              side={state.side}
-              aura={state.appearance?.aura}
-              mode={presenceMode}
-            />
-          )}
-          <div className={"orbit" + (state.side ? " " + state.side : "")} />
+          <EchoStage
+            imageUrl={activePortrait}
+            mode={presenceMode}
+            config={ghostConfig}
+            onConfig={updateGhostConfig}
+            onPhoto={(file) => void setSidePortrait(activeSide, file)}
+            onProject={() => setGhost(true)}
+          />
           <div className="presence-footer">
-            {state.side
-              ? "ONE POSSIBLE FUTURE · 52 WEEKS OUT"
-              : "ONE POSSIBLE FUTURE"}
+            ONE POSSIBLE FUTURE · 52 WEEKS OUT
             <span>
-              {portrait
-                ? state.side
-                  ? "PORTRAIT PROJECTION OF YOUR PHOTO · SCENARIO, NOT PREDICTION"
-                  : "PORTRAIT PROJECTION OF YOUR PHOTO · STAYS ON THIS DEVICE"
-                : state.side
-                  ? "ORIGINAL DIGITAL PERSONA · SCENARIO, NOT PREDICTION"
-                  : "ORIGINAL DIGITAL PERSONA · NOT YOUR LIKENESS"}
+              SCENARIO, NOT PREDICTION · PHOTO AND CAMERA STAY ON THIS DEVICE
             </span>
+            <p className="runtime-proof">{runtimeLabel}</p>
           </div>
         </section>
         <aside>
-          <FuturePortrait key={portraitEpoch} session={session} />
+          <FuturePortrait
+            key={portraitEpoch}
+            session={session}
+            onUse={(side, blob) =>
+              void useGeneratedPortrait(side as Side, blob)
+            }
+          />
           <div className="eyebrow">
             {state.panel === "privacy"
               ? "OUTBOUND CALLS"
@@ -741,7 +864,8 @@ function App() {
               four, forty minutes, done.”
             </p>
             <p>“That was too much.” · “Come back.” · “Undo that.”</p>
-            <p>“Put on the monarch armor.” · “Make my aura gold.”</p>
+            <p>“Show me my dream life.” · “What if I drift?”</p>
+            <p>“Follow my head.” · “Hologram mode.” · “Real mode.”</p>
             <p>“Scan my face.” · “Close.”</p>
             <p>“Export my data.” · “Delete all my data.”</p>
           </div>

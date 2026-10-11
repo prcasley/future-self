@@ -48,3 +48,38 @@ test("each pyramid face mirrors in its own coordinates before rotation", () => {
     );
   }
 });
+
+import {
+  DEFAULT_GHOST_CONFIG,
+  normalizeGhostConfig,
+} from "../src/ghost/config.ts";
+
+test("one serializable config covers all display calibration without image data", () => {
+  assert.deepEqual(
+    normalizeGhostConfig(JSON.parse(JSON.stringify(DEFAULT_GHOST_CONFIG))),
+    DEFAULT_GHOST_CONFIG,
+  );
+  assert.equal(DEFAULT_GHOST_CONFIG.mirrored, true);
+  assert.equal(DEFAULT_GHOST_CONFIG.follow, false);
+  assert.equal(DEFAULT_GHOST_CONFIG.keepAwake, true);
+  const normalized = normalizeGhostConfig({
+    size: Infinity,
+    vertical: -999,
+    brightness: 100,
+    contrast: NaN,
+    layout: "unknown",
+    mirrored: "false",
+    imageUrl: "private-photo",
+    rim: -1,
+    feather: 100,
+  });
+  assert.equal(normalized.size, 100);
+  assert.equal(normalized.vertical, -30);
+  assert.equal(normalized.brightness, 1.8);
+  assert.equal(normalized.contrast, 1.16);
+  assert.equal(normalized.layout, "single");
+  assert.equal(normalized.mirrored, true);
+  assert.equal(normalized.rim, 0);
+  assert.equal(normalized.feather, 85);
+  assert.equal("imageUrl" in normalized, false);
+});

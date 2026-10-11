@@ -8,6 +8,15 @@
   isolation: isolate;
   font-family: system-ui, sans-serif;
 }
+.ghost-projection {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  container-type: size;
+  isolation: isolate;
+}
 .ghost-mode.is-running {
   cursor: none;
 }
@@ -15,8 +24,8 @@
   position: absolute;
   left: 0;
   top: 0;
-  width: min(80vw, 70vh);
-  height: min(100vw, 87.5vh);
+  width: min(80cqw, 70cqh);
+  height: min(100cqw, 87.5cqh);
   opacity: 0;
   pointer-events: none;
 }
@@ -29,13 +38,13 @@
   pointer-events: none;
 }
 .ghost-field.pyramid {
-  width: 100vmin;
-  height: 100vmin;
+  width: 100cqmin;
+  height: 100cqmin;
   inset: auto;
   left: 50%;
   top: 50%;
-  margin-left: -50vmin;
-  margin-top: -50vmin;
+  margin-left: -50cqmin;
+  margin-top: -50cqmin;
 }
 .ghost-copy {
   position: absolute;
@@ -46,7 +55,7 @@
   height: 100%;
   mask-image: radial-gradient(
     ellipse 50% 50% at 50% 45%,
-    #000 62%,
+    #000 var(--ghost-feather, 62%),
     transparent 100%
   );
 }
@@ -55,8 +64,10 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
-  filter: brightness(1.28) contrast(1.16) drop-shadow(0 0 5px #a9d8ed88)
-    drop-shadow(0 0 12px #a9d8ed33);
+  filter: brightness(var(--ghost-brightness, 1.28))
+    contrast(var(--ghost-contrast, 1.16))
+    drop-shadow(0 0 5px rgb(169 216 237 / var(--ghost-rim, 0.53)))
+    drop-shadow(0 0 12px rgb(169 216 237 / calc(var(--ghost-rim, 0.53) * 0.4)));
 }
 .ghost-controls {
   position: absolute;

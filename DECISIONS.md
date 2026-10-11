@@ -15,6 +15,15 @@ At the user's explicit request, Antigravity implemented the procedural bust, sha
 - Included a small integration stage alongside the backend. No Antigravity agent or overnight job was launched.
 - Use ports 5186 and 8016 to avoid other local apps.
 
+## September 29, 2026 — ECHO is a living photoreal portrait by default (Claude, now owning the face)
+
+- Prat's verdict on the wireframe bust and the teal projection: ugly. From now on the main stage renders `living/LivingPortrait` (photoreal, blinks, breathes, talks, follows the viewer's head) in a lit virtual room with the side's light. The teal projection ("Hologram") and the procedural bust stay one button away; nothing was deleted.
+- The future gallery: one face per side. Sources, in order: faces the user sets in this browser (IndexedDB, same store as the photo; "Set dream face" on the stage, or "Use as my dream face" under a generated preview), the developer's private gallery (`private/media/portraits/{home,dream,good,neutral,bad}.jpg`, gitignored, served by a dev-only Vite middleware, never built into the hosted demo), then the user's own photo. Crossing dissolves one face into the next. "forget my photo" and "delete all my data" clear the gallery too.
+- Prat's four portraits were generated in Gemini (Nano Banana, his consumer quota) from his own headshot with style-only prompts: identity, age, glasses, skin tone and body kept; wardrobe, grooming, lighting, posture and setting per side. They live only in `private/`.
+- Crossing requests ("show me my dream life", "what if I drift", "show me the hard road", "what happens if I quit") are now deterministic shortcuts in the API. Nemotron had narrated a dream life inline without calling `cross`, so the stage never changed; the tool call is no longer left to the model.
+- New voice commands, all local: "follow my head" / "stop following", "hologram mode" / "real mode".
+- Owner: Claude owns ECHO's face end to end (stage, gallery, portraits). ChatGPT is off this workstream.
+
 ## September 25, 2026 — photoreal future portraits
 
 - Adopt docs/VISION.md: photoreal generated source portraits, voice first with optional typing, Windows web product first, glasses later after device validation.

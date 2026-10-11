@@ -44,11 +44,6 @@ export interface LivingPortraitProps {
   onFrame?: (canvas: HTMLCanvasElement) => void;
 }
 
-// A short-lived handoff lets Ghost resume the face and camera choice currently on stage.
-// Cleared when that stage unmounts; no pixels or camera frames leave the renderer.
-let presentation: { imageUrl: string; follow: boolean } | null = null;
-export const currentLivingPresentation = () => presentation;
-
 const EYE_LIGHT: Record<string, [number, number, number]> = {
   home: [0.8, 0.9, 1.0],
   dream: [1.0, 0.82, 0.46],
@@ -260,15 +255,6 @@ export function LivingPortrait({
   manualRef.current = manual;
   accentRef.current = accent;
   callbacks.current = { onState, onMirror, onFps, onFrame };
-
-  useEffect(() => {
-    if (ghost || !imageUrl) return;
-    const value = { imageUrl, follow: mirror };
-    presentation = value;
-    return () => {
-      if (presentation === value) presentation = null;
-    };
-  }, [imageUrl, mirror, ghost]);
 
   // The camera mirror lives apart from the scene, so toggling it never rebuilds the portrait.
   useEffect(() => {

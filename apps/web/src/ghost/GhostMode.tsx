@@ -1,12 +1,11 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
-import {
-  LivingPortrait,
-  currentLivingPresentation,
-  type LivingState,
-} from "../living/LivingPortrait";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import type { LivingState } from "../living/LivingPortrait";
+import { GhostProjection } from "./GhostProjection";
+import type { GhostConfig } from "./config";
+import { useGhostConfig } from "./useGhostConfig";
 import type { Pose } from "../living/geometry";
 import type { Mode } from "../living/motion";
-import { ghostSlots, ghostTransform, type GhostLayout } from "./layout";
+import type { GhostLayout } from "./layout";
 import "./GhostMode.css";
 
 const atGhost = () => /^\/ghost(?:\/|$)/.test(window.location.pathname);
@@ -28,7 +27,11 @@ export function useGhostRoute(): [boolean, (value: boolean) => void] {
 
 type Props = {
   imageUrl: string | null;
-  resumeLiving?: boolean;
+  config?: GhostConfig;
+  onConfig?: (patch: Partial<GhostConfig>) => void;
+  onPhoto?: (file: File) => void;
+  onControlsChange?: (visible: boolean) => void;
+  children?: ReactNode;
   mode?: Mode;
   follow?: boolean;
   manual?: Partial<Pose> | null;
@@ -41,7 +44,11 @@ type Props = {
 
 export function GhostMode({
   imageUrl,
-  resumeLiving = false,
+  config: providedConfig,
+  onConfig,
+  onPhoto,
+  onControlsChange,
+  children,
   mode = "idle",
   follow = false,
   manual,
@@ -51,20 +58,20 @@ export function GhostMode({
   status,
   onExit,
 }: Props) {
-  const [presentation] = useState(() =>
-    resumeLiving ? currentLivingPresentation() : null,
-  );
+  const [localConfig, setLocalConfig] = useGhostConfig(!providedConfig);
+  const config = providedConfig || localConfig;
+  const update = onConfig || setLocalConfig;
+  const { mirrored, layout, size, vertical, follow: tracking } = config;
+  const controlsCallback = useRef(onControlsChange);
+  controlsCallback.current = onControlsChange;
+  useEffect(() => {
+    if (!providedConfig) setLocalConfig({ follow });
+  }, [follow]);
   const root = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLElement>(null);
-  const copies = useRef<(HTMLCanvasElement | null)[]>([]);
   const [photo, setPhoto] = useState<string | null>(null);
-  const url = photo || presentation?.imageUrl || imageUrl;
+  const url = photo || imageUrl;
   const [controls, setControls] = useState(true);
-  const [mirrored, setMirrored] = useState(true);
-  const [layout, setLayout] = useState<GhostLayout>("single");
-  const [size, setSize] = useState(100);
-  const [vertical, setVertical] = useState(0);
-  const [tracking, setTracking] = useState(presentation?.follow ?? follow);
   const [camera, setCamera] = useState("off");
   const [state, setState] = useState<LivingState>("loading");
   const [detail, setDetail] = useState("");
@@ -79,10 +86,6 @@ export function GhostMode({
   );
   useEffect(() => {
     setState("loading");
-    setControls(true);
-    copies.current.forEach((c) =>
-      c?.getContext("2d")?.clearRect(0, 0, c.width, c.height),
-    );
   }, [url]);
   useEffect(() => {
     const previous = document.body.style.overflow;
@@ -102,12 +105,17 @@ export function GhostMode({
     };
   }, []);
   useEffect(() => {
+    controlsCallback.current?.(controls);
     if (controls) panel.current?.focus();
     else root.current?.focus();
   }, [controls]);
 
   // Browsers release locks when hidden. Reacquire on return and release on exit.
   useEffect(() => {
+    if (!config.keepAwake) {
+      setAwake("Keep-awake off");
+      return;
+    }
     if (!url || state !== "ready") return;
     let disposed = false;
     let pending = false;
@@ -146,7 +154,7 @@ export function GhostMode({
       document.removeEventListener("visibilitychange", request);
       void lock?.release();
     };
-  }, [url, state]);
+  }, [url, state, config.keepAwake]);
 
   const fullscreen = async () => {
     try {
@@ -169,20 +177,6 @@ export function GhostMode({
     }
     onExit();
   };
-  const frame = (source: HTMLCanvasElement) => {
-    for (const canvas of copies.current) {
-      if (!canvas) continue;
-      if (canvas.width !== source.width || canvas.height !== source.height) {
-        canvas.width = source.width;
-        canvas.height = source.height;
-      }
-      const ctx = canvas.getContext("2d");
-      if (!ctx) continue;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(source, 0, 0);
-    }
-  };
-
   return (
     <div
       ref={root}
@@ -193,59 +187,18 @@ export function GhostMode({
         if (!controls) setControls(true);
       }}
     >
-      <div className="ghost-source" aria-hidden="true">
-        <LivingPortrait
-          imageUrl={url}
-          mode={mode}
-          mirror={tracking}
-          manual={manual}
-          cutout
-          ghost
-          accent={null}
-          onFrame={frame}
-          onMirror={setCamera}
-          onState={(next, message) => {
-            setState(next);
-            setDetail(message || "");
-            if (next === "error" || next === "noface") setControls(true);
-          }}
-        />
-      </div>
-      <div
-        className={`ghost-field ${layout}`}
-        style={{ transform: `translateY(${vertical}vh)` }}
-        aria-hidden="true"
-      >
-        {ghostSlots(layout).map((slot, i) => {
-          const style: CSSProperties = {
-            left: `${slot.x}%`,
-            top: `${slot.y}%`,
-            width:
-              layout === "single"
-                ? `min(${size * 0.8}vw, ${size * 0.7}vh)`
-                : `${size * 0.27}%`,
-            height:
-              layout === "single" ? `${size * 0.85}vh` : `${size * 0.32}%`,
-            transform: ghostTransform(slot.rotation, mirrored),
-          };
-          return (
-            <div
-              className="ghost-copy"
-              data-slot={slot.name}
-              key={slot.name}
-              style={style}
-            >
-              <div className="ghost-feather">
-                <canvas
-                  ref={(el) => {
-                    copies.current[i] = el;
-                  }}
-                />
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      <GhostProjection
+        imageUrl={url}
+        mode={mode}
+        config={config}
+        manual={manual}
+        onMirror={setCamera}
+        onState={(next, message) => {
+          setState(next);
+          setDetail(message || "");
+          if (next === "error" || next === "noface") setControls(true);
+        }}
+      />
       {controls && (
         <section
           ref={panel}
@@ -273,7 +226,10 @@ export function GhostMode({
               accept="image/png,image/jpeg,image/webp"
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) setPhoto(URL.createObjectURL(file));
+                if (file) {
+                  if (onPhoto) onPhoto(file);
+                  else setPhoto(URL.createObjectURL(file));
+                }
                 e.target.value = "";
               }}
             />
@@ -282,7 +238,7 @@ export function GhostMode({
             <input
               type="checkbox"
               checked={mirrored}
-              onChange={(e) => setMirrored(e.target.checked)}
+              onChange={(e) => update({ mirrored: e.target.checked })}
             />
             Mirror reflection
           </label>
@@ -291,7 +247,9 @@ export function GhostMode({
             <select
               aria-label="Ghost layout"
               value={layout}
-              onChange={(e) => setLayout(e.target.value as GhostLayout)}
+              onChange={(e) =>
+                update({ layout: e.target.value as GhostLayout })
+              }
             >
               <option value="single">Single portrait</option>
               <option value="pyramid">Four-sided pyramid</option>
@@ -305,7 +263,7 @@ export function GhostMode({
               min="40"
               max="140"
               value={size}
-              onChange={(e) => setSize(Number(e.target.value))}
+              onChange={(e) => update({ size: Number(e.target.value) })}
             />
             <output>{size}%</output>
           </label>
@@ -317,7 +275,7 @@ export function GhostMode({
               min="-30"
               max="30"
               value={vertical}
-              onChange={(e) => setVertical(Number(e.target.value))}
+              onChange={(e) => update({ vertical: Number(e.target.value) })}
             />
             <output>{vertical}%</output>
           </label>
@@ -325,7 +283,7 @@ export function GhostMode({
             <input
               type="checkbox"
               checked={tracking}
-              onChange={(e) => setTracking(e.target.checked)}
+              onChange={(e) => update({ follow: e.target.checked })}
             />
             Follow my head
           </label>
@@ -334,7 +292,63 @@ export function GhostMode({
             {awake}
             {screen && ` · ${screen}`}
           </p>
-          {status && <p>{status}</p>}
+          <label>
+            Brightness{" "}
+            <input
+              aria-label="Ghost brightness"
+              type="range"
+              min="0.8"
+              max="1.8"
+              step="0.02"
+              value={config.brightness}
+              onChange={(e) => update({ brightness: Number(e.target.value) })}
+            />
+          </label>
+          <label>
+            Contrast{" "}
+            <input
+              aria-label="Ghost contrast"
+              type="range"
+              min="0.8"
+              max="1.6"
+              step="0.02"
+              value={config.contrast}
+              onChange={(e) => update({ contrast: Number(e.target.value) })}
+            />
+          </label>
+          <label>
+            Rim light{" "}
+            <input
+              aria-label="Rim light"
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={config.rim}
+              onChange={(e) => update({ rim: Number(e.target.value) })}
+            />
+          </label>
+          <label>
+            Edge fade{" "}
+            <input
+              aria-label="Edge fade"
+              type="range"
+              min="20"
+              max="85"
+              value={config.feather}
+              onChange={(e) => update({ feather: Number(e.target.value) })}
+            />
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={config.keepAwake}
+              onChange={(e) => update({ keepAwake: e.target.checked })}
+            />
+            Keep screen awake
+          </label>
+          {status && <p role="status">{status}</p>}
+          {children}
           <div className="ghost-actions">
             <button
               disabled={!url || state !== "ready"}

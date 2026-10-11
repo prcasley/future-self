@@ -3,6 +3,7 @@ import json
 import re
 import time
 from collections import defaultdict
+from datetime import datetime, timezone
 from pathlib import Path
 from threading import Lock
 from typing import Literal
@@ -29,6 +30,28 @@ EXPORT_ALL = re.compile(
     r"|\b(export|download) everything\b"
     r"|\bgive me (a copy of )?(all )?(of )?my data\b"
 )
+# Crossing requests are deterministic: they never depend on the model choosing the tool.
+CROSS_SIDES = (
+    (re.compile(r"\b(dream|best|ideal)\b.*\b(life|path|future|self|side|me|version)\b|\bdream life\b|\bbest case\b"), "dream"),
+    (re.compile(r"\bgood (life|path|future|side|version|road)\b|\bgood case\b|\bif i (commit|stay consistent|keep going)\b"), "good"),
+    (re.compile(r"\bdrift(ing)?\b|\bneutral\b|\bcoast(ing)?\b|\bif i (do nothing|stay the same|don'?t change)\b|\bmiddle (path|road)\b"), "neutral"),
+    (re.compile(r"\bhard (road|path|life|way)\b|\bbad (life|path|future|side|version|road)\b|\bworst case\b|\bif i (quit|give up|slip|fall off)\b|\bdark(er)? (path|side|road)\b"), "bad"),
+)
+CROSS_INTENT = re.compile(
+    r"\b(show|take|bring|walk|let)\b.*\b(me|us)\b|\bwhat (if|happens)\b|\bcross\b|\bother side\b|\bsimulat\w*\b|\bvisit\b|\bsee (my|the)\b"
+)
+
+
+def cross_shortcut(text: str) -> str | None:
+    """The side a spoken crossing request names, when it clearly asks to go there."""
+    if not CROSS_INTENT.search(text):
+        return None
+    for pattern, side in CROSS_SIDES:
+        if pattern.search(text):
+            return side
+    return None
+
+
 WIPE_ALL = re.compile(
     r"\b(delete|erase|wipe|remove|clear|forget) (all|everything)( of)?"
     r"( my data| my information| you know about me| about me)?( please)?$"
@@ -635,6 +658,51 @@ async def audio_turn(session_id: UUID = Form(...), audio: UploadFile = File(...)
     )
 
 
+class SessionStart(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    session_id: UUID
+    timezone: str | None = Field(default=None, max_length=100)
+
+
+@app.post("/voice/connect")
+async def connect_voice(body: SessionStart):
+    """A useful real Nemotron greeting, never a mock or a configuration-only green badge."""
+    session = str(body.session_id)
+    if not settings.nebius_api_key or not settings.nebius_super_model.lower().startswith("nvidia/"):
+        raise HTTPException(503, "Configure an NVIDIA Nemotron model on Nebius Token Factory.")
+    if locks[session].locked():
+        raise HTTPException(409, "A turn is already running. Please try again.")
+    async with locks[session]:
+        if not allow_model(session):
+            raise HTTPException(429, BUDGET_MESSAGE)
+        state = store.load(session)
+        if body.timezone and daily.valid_timezone(body.timezone):
+            state["timezone"] = body.timezone
+        # Prepare the mission in memory; persist only after a successful provider response.
+        opening = act(state, "open_day", {})
+        try:
+            result = await model_turn(
+                state,
+                "Welcome me to this session as ECHO in at most 45 words. Use my current mission if one "
+                "exists; otherwise ask for one goal. Do not claim a task was completed. "
+                "The local daily planner says: " + opening,
+                tools=[], max_tokens=180,
+            )
+            greeting = (result.get("content") or "").strip()
+            if not greeting:
+                raise ValueError("empty greeting")
+        except (httpx.HTTPError, TimeoutError, RuntimeError, ValueError):
+            raise HTTPException(503, "Nebius could not complete the live session greeting. Try again.") from None
+        store.save(session, state)
+        return JSONResponse({
+            "greeting": greeting,
+            "state": public(state),
+            "provider": "Nebius Token Factory",
+            "model": settings.nebius_super_model,
+            "verified_at": datetime.now(timezone.utc).isoformat(),
+        }, headers={"Cache-Control": "no-store"})
+
+
 @app.post("/voice/text_turn")
 async def text_turn(turn: Turn):
     session = str(turn.session_id)
@@ -683,6 +751,9 @@ async def text_turn(turn: Turn):
                 elif WIPE_ALL.search(normalized):
                     state["pending"] = None
                     action, args = "wipe_all_data", {}
+                elif (side := cross_shortcut(normalized)) is not None:
+                    state["pending"] = None
+                    action, args = "cross", {"side": side}
                 elif (command := daily.shortcut(turn.text)) is not None:
                     state["pending"] = None
                     action, args = command

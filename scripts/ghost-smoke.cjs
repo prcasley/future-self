@@ -86,7 +86,7 @@ const root = path.resolve(__dirname, "..");
     await page.getByLabel("Vertical position").fill("12");
     assert.match(
       await page.locator(".ghost-field").getAttribute("style"),
-      /translateY\(12vh\)/,
+      /translateY\(12cqh\)/,
     );
     await page.getByRole("button", { name: "Fullscreen", exact: true }).click();
     await page.waitForFunction(() => !!document.fullscreenElement);
@@ -144,8 +144,8 @@ const root = path.resolve(__dirname, "..");
     if (await page.locator(".echo-stage").count()) {
       await page.waitForFunction(
         () =>
-          document.querySelector(".echo-layer .living-portrait canvas")?.width >
-          300,
+          document.querySelector(".echo-output .living-portrait canvas")
+            ?.width > 300,
         {},
         { timeout: 60000 },
       );
