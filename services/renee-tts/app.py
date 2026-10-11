@@ -8,9 +8,11 @@ API forwards one sentence at a time to POST /synthesize.
 import hmac
 import io
 import os
+from threading import Lock
 
 import numpy as np
 import soundfile as sf
+import torch
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import Response
 from kokoro import KPipeline
@@ -24,8 +26,11 @@ if not API_KEY and os.environ.get("RENEE_TTS_OPEN") != "1":
     raise RuntimeError("Set RENEE_TTS_KEY (or RENEE_TTS_OPEN=1 for a local, unexposed test).")
 
 app = FastAPI(title="Renée TTS")
-pipeline = KPipeline(lang_code="b")  # "b" = British English
-pipeline.load_voice(DEFAULT_VOICE)  # warm up so the first sentence isn't slow
+# CPU is deliberate: deployment must not silently depend on a local GPU.
+torch.set_num_threads(int(os.environ.get("RENEE_CPU_THREADS", "4")))
+pipeline = KPipeline(lang_code="b", repo_id="hexgrad/Kokoro-82M", device="cpu")
+pipeline.load_voice(DEFAULT_VOICE)
+synthesis_lock = Lock()
 
 
 class Speech(BaseModel):
@@ -37,7 +42,8 @@ class Speech(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"ok": True, "model": "hexgrad/Kokoro-82M", "voice": DEFAULT_VOICE, "name": "Renée"}
+    return {"ok": True, "model": "hexgrad/Kokoro-82M", "voice": DEFAULT_VOICE, "name": "Renée",
+            "device": str(next(pipeline.model.parameters()).device), "threads": torch.get_num_threads()}
 
 
 @app.post("/synthesize")
@@ -46,7 +52,9 @@ def synthesize(body: Speech, authorization: str = Header(default="")):
         raise HTTPException(401, "Missing or wrong key.")
     if body.voice not in VOICES:
         raise HTTPException(400, f"Renée only speaks with a British voice: {sorted(VOICES)}")
-    chunks = [audio for _, _, audio in pipeline(body.text, voice=body.voice, speed=body.speed)]
+    # One shared model: bound CPU contention when several clients request speech.
+    with synthesis_lock:
+        chunks = [audio for _, _, audio in pipeline(body.text, voice=body.voice, speed=body.speed)]
     if not chunks:
         raise HTTPException(422, "Nothing to say.")
     wav = io.BytesIO()

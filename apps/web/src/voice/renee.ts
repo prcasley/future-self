@@ -2,7 +2,7 @@
 //
 // Two engines, in order:
 //  1. Renée's own voice, served by our API (/api/voice/tts), which forwards to the Kokoro
-//     model (voice bf_emma) running on Nebius. Same voice on every device.
+//     model (voice bf_emma) running in our voice service. Same voice on every device.
 //  2. The best British female voice built into this browser.
 // It never switches silently: `describe()` always names the engine and the voice in use.
 
@@ -52,7 +52,7 @@ export type Engine =
 
 /** What the person sees, so the voice is never swapped without saying so. */
 export function describe(engine: Engine): string {
-  if (engine.kind === "service") return `Voice: ${RENEE.name} · British · Kokoro on Nebius`;
+  if (engine.kind === "service") return `Voice: ${RENEE.name} · British · Kokoro`;
   if (engine.kind === "browser") return `Voice: ${RENEE.name} · British · ${engine.voice} (this browser)`;
   return `Voice: ${RENEE.name} isn't available here, so ECHO is using this browser's default voice`;
 }

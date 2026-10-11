@@ -3,3 +3,5 @@ soundfile
 numpy
 fastapi
 uvicorn[standard]
+python-dotenv
+espeakng-loader; sys_platform == 'win32'

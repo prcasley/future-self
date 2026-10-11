@@ -1,0 +1,44 @@
+{
+  "cpu": "AMD Ryzen 7 7700, 8 cores / 16 logical processors",
+  "health": {
+    "ok": true,
+    "model": "hexgrad/Kokoro-82M",
+    "voice": "bf_emma",
+    "name": "Ren\u00e9e",
+    "device": "cpu",
+    "threads": 4
+  },
+  "requests": [
+    {
+      "text": "Good evening. I'm you, one year from now. Let's talk about what got us here.",
+      "request_seconds": 1.866,
+      "audio_seconds": 4.875,
+      "real_time_factor": 0.383
+    },
+    {
+      "text": "I'm you, one year from now.",
+      "request_seconds": 0.744,
+      "audio_seconds": 2.425,
+      "real_time_factor": 0.307
+    },
+    {
+      "text": "I'm you, one year from now.",
+      "request_seconds": 0.726,
+      "audio_seconds": 2.425,
+      "real_time_factor": 0.299
+    },
+    {
+      "text": "I'm you, one year from now.",
+      "request_seconds": 0.765,
+      "audio_seconds": 2.425,
+      "real_time_factor": 0.315
+    },
+    {
+      "text": "I'm you, one year from now.",
+      "request_seconds": 0.738,
+      "audio_seconds": 2.425,
+      "real_time_factor": 0.304
+    }
+  ],
+  "warm_sentence_median_seconds": 0.738
+}

@@ -32,7 +32,7 @@ test("never picks a British man or an American voice", () => {
 });
 
 test("the label always names the engine", () => {
-  assert.match(describe({ kind: "service", voice: "bf_emma" }), /Renée.*Kokoro on Nebius/);
+  assert.match(describe({ kind: "service", voice: "bf_emma" }), /Renée.*Kokoro/);
   assert.match(describe({ kind: "browser", voice: "Google UK English Female" }), /Google UK English Female/);
   assert.match(describe({ kind: "missing" }), /isn't available/);
 });

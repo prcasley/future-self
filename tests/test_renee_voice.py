@@ -43,7 +43,7 @@ def test_forwards_to_kokoro_with_bf_emma_and_returns_audio(client, monkeypatch):
     assert seen["url"] == "https://renee.example/synthesize"
     assert seen["auth"] == "Bearer secret"
     assert b'"voice":"bf_emma"' in seen["body"].replace(b" ", b"")
-    assert client.get("/health").json()["voice"]["engine"] == "kokoro-nebius"
+    assert client.get("/health").json()["voice"]["engine"] == "kokoro"
 
 
 @pytest.mark.parametrize("status,ctype", [(500, "audio/wav"), (200, "application/json")])

@@ -574,7 +574,7 @@ def health():
         "voice": {
             "name": "Renée",
             "accent": "British English",
-            "engine": "kokoro-nebius" if settings.renee_tts_url else "browser",
+            "engine": "kokoro" if settings.renee_tts_url else "browser",
         },
         "scope": "hosted-demo" if settings.demo_password else "local-single-user",
         "budget": {
@@ -772,7 +772,7 @@ class SpeechRequest(BaseModel):
 
 @app.post("/voice/tts")
 async def renee_tts(body: SpeechRequest):
-    """Renée's voice. Forwards one sentence to the Kokoro service on Nebius and returns WAV audio."""
+    """Renée's voice. Forwards one sentence to the Kokoro service and returns WAV audio."""
     if not settings.renee_tts_url:
         raise HTTPException(503, "Renée's voice service isn't deployed, so this browser's British voice is used.")
     if not allow_tts():
