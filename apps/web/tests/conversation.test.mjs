@@ -73,3 +73,12 @@ test("rms of silence is zero and of a full-scale square wave is one", () => {
   assert.equal(rmsOf(new Float32Array(64)), 0);
   assert.equal(rmsOf(Float32Array.from({ length: 64 }, (_, i) => (i % 2 ? 1 : -1))), 1);
 });
+
+test("a stop command clipped by barge-in still stops, but only right after a barge-in", () => {
+  assert.equal(isStopCommand("listening"), false);
+  assert.equal(isStopCommand("listening", true), true);
+  assert.equal(isStopCommand("all for now", true), true);
+  assert.equal(isStopCommand("stop listening", true), true);
+  assert.equal(isStopCommand("listening to music helps me focus", true), false);
+  assert.equal(isStopCommand("all of my goals", true), false);
+});

@@ -216,6 +216,17 @@ export function GhostMode({
           if (next === "error" || next === "noface") setControls(true);
         }}
       />
+      {!controls && running && onSession && (
+        // While projecting, the mic's state and its off switch stay on screen, dim so the glass
+        // barely shows them. Tapping here stops listening without bringing the controls back.
+        <div className="ghost-live" onPointerDown={(e) => e.stopPropagation()}>
+          <span className="ghost-live-dot" aria-hidden="true" />
+          <span role="status">Listening</span>
+          <button type="button" onClick={onSession}>
+            Stop listening
+          </button>
+        </div>
+      )}
       {controls && (
         <section
           ref={panel}
@@ -387,7 +398,7 @@ export function GhostMode({
             </button>
             {onSession && (
               <button onClick={onSession}>
-                {running ? "End session" : "Start session"}
+                {running ? "Stop listening" : "Start session"}
               </button>
             )}
             {running && onInterrupt && (

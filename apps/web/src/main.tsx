@@ -150,6 +150,7 @@ function App() {
   const busy = useRef(false);
   // Conversation: barge-in watcher, last time anything was said or heard, and why it ended.
   const bargeIn = useRef<Awaited<ReturnType<typeof createBargeIn>>>(null);
+  const bargedIn = useRef(false); // the next utterance began over Reneė, so its first word may be clipped
   const lastActivity = useRef(0);
   const quietTimer = useRef<number | null>(null);
   const endedStatus = useRef("Session ended");
@@ -381,7 +382,9 @@ function App() {
   };
   const submit = async (text: string, spoken = true) => {
     lastActivity.current = Date.now();
-    if (spoken && isStopCommand(text)) {
+    const afterBargeIn = bargedIn.current;
+    bargedIn.current = false;
+    if (spoken && isStopCommand(text, afterBargeIn)) {
       setHeard(text);
       endSession("Stopped listening. Tap Start session to talk again.");
       speak("Okay. I'll be right here.");
@@ -550,6 +553,7 @@ function App() {
     setTalking(false);
     bargeIn.current?.close();
     bargeIn.current = null;
+    bargedIn.current = false;
     if (quietTimer.current !== null) window.clearInterval(quietTimer.current);
     quietTimer.current = null;
     setStatus(reason);
@@ -614,6 +618,7 @@ function App() {
       setHeard(text);
     };
     rec.onerror = (e: any) => {
+      if (recognition.current !== rec) return;
       if (
         [
           "not-allowed",
@@ -623,9 +628,8 @@ function App() {
           "language-not-supported",
         ].includes(e.error)
       ) {
-        enabled.current = false;
-        setRunning(false);
-        setStatus(
+        // endSession also releases the barge-in microphone, so no capture is left running.
+        endSession(
           e.error === "network"
             ? "Speech recognition lost its connection. Check your network, then start again."
             : "Microphone unavailable. Allow it in browser site settings, then start again.",
@@ -641,20 +645,19 @@ function App() {
     setStatus(listeningText());
     watchQuiet();
     void createBargeIn(() => {
-      if (speaking.current && enabled.current) interrupt();
+      if (speaking.current && enabled.current) {
+        bargedIn.current = true;
+        interrupt();
+      }
     }).then((watcher) => {
-      if (enabled.current) bargeIn.current = watcher;
+      if (enabled.current && recognition.current === rec) bargeIn.current = watcher;
       else watcher?.close();
     });
     try {
       if (!typing.current) rec.start();
       void submit("start my day", false);
     } catch {
-      enabled.current = false;
-      setRunning(false);
-      setStatus(
-        "Microphone could not start. Check browser permissions and try again.",
-      );
+      endSession("Microphone could not start. Check browser permissions and try again.");
     }
   };
   const interrupt = () => {

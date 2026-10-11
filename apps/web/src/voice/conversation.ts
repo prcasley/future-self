@@ -46,9 +46,15 @@ export function createSentenceStream() {
 const STOP =
   /^\s*(?:ok(?:ay)?[,\s]+)?(?:stop listening|go to sleep|goodbye(?: echo)?|bye(?: bye)?(?: echo)?|good ?night(?: echo)?|that'?s all(?: for (?:now|today))?|end (?:the )?session)\W*$/i;
 
-/** A spoken request to stop listening. Matches the whole utterance, so "stop" mid-sentence doesn't. */
-export function isStopCommand(text: string): boolean {
-  return STOP.test(text);
+// What's left of a stop command when barge-in clipped its first word ("stop listening" → "listening").
+const STOP_TAIL = /^\s*(?:listening|all(?: for (?:now|today))?)\W*$/i;
+
+/**
+ * A spoken request to stop listening. Matches the whole utterance, so "stop" mid-sentence doesn't.
+ * Right after a barge-in the recogniser starts a beat late, so the clipped tail also counts there.
+ */
+export function isStopCommand(text: string, afterBargeIn = false): boolean {
+  return STOP.test(text) || (afterBargeIn && STOP_TAIL.test(text));
 }
 
 export const QUIET_PAUSE_MS = 60_000;
@@ -117,9 +123,12 @@ export async function createBargeIn(onSpeech: () => void) {
     timer = null;
   };
   return {
-    /** Start watching while Reneė speaks. */
+    /**
+     * Start watching while Reneė speaks. Already watching (her next sentence queued): keep going,
+     * so the room isn't re-learned mid-reply and a barge-in can land between sentences.
+     */
     arm() {
-      disarm();
+      if (timer !== null) return;
       state = bargeStart();
       void context.resume();
       let last = performance.now();

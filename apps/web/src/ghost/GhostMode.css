@@ -137,3 +137,40 @@
   outline: 2px solid #a9d8ed;
   outline-offset: 3px;
 }
+/* Projecting: a dim corner chip keeps the mic's state and its off switch reachable. */
+.ghost-live {
+  position: absolute;
+  left: max(12px, env(safe-area-inset-left));
+  bottom: max(12px, env(safe-area-inset-bottom));
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 6px 10px;
+  border: 1px solid #2a2c33;
+  border-radius: 999px;
+  background: #000;
+  font-size: 13px;
+  opacity: 0.4;
+  cursor: default;
+  transition: opacity 0.2s;
+}
+.ghost-live:hover,
+.ghost-live:focus-within {
+  opacity: 1;
+}
+.ghost-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e5484d;
+}
+.ghost-live button {
+  padding: 6px 10px;
+  border: 1px solid #656875;
+  border-radius: 999px;
+  background: #111;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}

@@ -94,3 +94,16 @@ reads the configured ignored `.env`. No changes were pushed.
 - Verified in headless Chromium against a test-only streaming stub: a three-sentence reply was spoken
   as three chunks while streaming, "stop listening" ended the session, and a quiet minute paused it.
   Barge-in itself needs a real microphone and speakers; ChatGPT on the PC tests it next.
+
+## 2026-10-11 — Off switch always in reach, mic always released
+
+Fixes from ChatGPT's source review of the conversation loop on the PC:
+- `/ghost`: while projecting, a dim corner chip shows that ECHO is listening and keeps **Stop listening** one tap away
+  (it used to sit inside the hidden controls). The session button there now says Stop listening too.
+- A speech-recognition error or a failed start now ends the session properly, which also releases the separate
+  barge-in microphone stream; before, that stream could stay open.
+- Barge-in learns the room once per reply instead of again for every queued sentence, so talking over Reneė between
+  sentences isn't missed. If barge-in clips the first word of a stop command ("…listening", "…all for now"), it
+  still stops, but only right after a barge-in.
+- Validation: 66 web tests and the production build pass. A real microphone and speakers are still needed to
+  measure barge-in; that test is prepared on the PC.
