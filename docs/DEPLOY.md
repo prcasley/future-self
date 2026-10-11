@@ -18,14 +18,14 @@ The password is HTTP Basic, so the browser shows its own sign-in box once and th
 
 ## Deploy on Railway
 
-1. Push the branch to GitHub first. Rotate the Nebius key before anything goes public.
+1. Have Claude push the reviewed branch to GitHub first. Per Prat's current decision, keep the existing Nebius key. Follow `docs/RAILWAY-CHECKLIST.md`; Prat handles account, billing and secrets.
 2. In Railway: New Project → Deploy from GitHub repo → pick `prcasley/future-self` and the branch. `railway.toml` makes Railway build the `Dockerfile` and probe `/api/health`.
 3. Add a volume mounted at `/data`, so goals, memories and the Lab survive redeploys. The image runs as root, because Railway mounts volumes root-owned.
 4. Set these variables:
 
 | Variable | Value |
 | --- | --- |
-| `NEBIUS_API_KEY` | the rotated Token Factory key |
+| `NEBIUS_API_KEY` | the existing Token Factory key, entered privately by Prat |
 | `DEMO_PASSWORD` | a random password of at least 16 characters for the judges; the server refuses to start with a shorter one. After 20 wrong passwords in 10 minutes an IP gets 429 for the rest of the window |
 | `DEMO_USER` | optional; defaults to `judge` |
 | `MODEL_DAILY_CAP` | model calls per UTC day across everyone; the image defaults to 200 (about 6 full judge sessions a day, worst case roughly $1 a day at the prices we expect; check the current Token Factory prices), and `0` turns the cap off |

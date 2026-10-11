@@ -1,0 +1,13 @@
+{
+  "status": "awaiting_prat",
+  "method": "Last audible user phoneme to first audible Rene\u0117 sound on the same acoustic recording.",
+  "target_turns": 30,
+  "measured_turns": 0,
+  "failed_turns": 0,
+  "pending_turns": 30,
+  "typical_median_ms": null,
+  "worst_ms": null,
+  "recorded_at": "2026-10-11T21:13:46+00:00",
+  "turns": [],
+  "note": "Partial statistics are not a completed 30-turn benchmark. Failures are counted, never hidden."
+}
