@@ -50,10 +50,6 @@ The portrait itself needs no API. Conversation uses the existing API configurati
 
 ## Stand-in provenance
 
-`stand-in.jpg` is the public-domain official White House photograph of Barack Obama by Pete Souza, December 6, 2012, cropped as distributed by Wikimedia Commons:
-https://commons.wikimedia.org/wiki/File:President_Barack_Obama,_2012_portrait_crop.jpg
-
-Downloaded source:
-https://upload.wikimedia.org/wikipedia/commons/5/55/President_Barack_Obama%2C_2012_portrait_crop.jpg
+`stand-in.jpg` is a synthetic, AI-generated portrait of a person who does not exist, made for testing. It replaced an earlier public-domain photo of a real person on Oct 11, 2026; `normal.png`, `mirrored.png`, `pyramid.png` and `phone-pyramid.png` were retaken with it, and the three main-stage screenshots taken with the old photo were removed.
 
 All screenshots use this stand-in in a fresh browser context. Private portrait requests were blocked (or fulfilled with this same stand-in for the handoff test). The user's selfie was not used.
