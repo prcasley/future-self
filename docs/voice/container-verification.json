@@ -1,0 +1,84 @@
+{
+  "commit": "0f52d35",
+  "image": "the-other-side:local-0f52d35",
+  "checks": [
+    {
+      "path": "/api/health",
+      "authenticated": false,
+      "status": 200
+    },
+    {
+      "path": "/",
+      "authenticated": false,
+      "status": 401
+    },
+    {
+      "path": "/ghost",
+      "authenticated": false,
+      "status": 401
+    },
+    {
+      "path": "/api/state/00000000-0000-0000-0000-000000000001",
+      "authenticated": false,
+      "status": 401
+    },
+    {
+      "path": "/",
+      "authenticated": true,
+      "status": 200
+    },
+    {
+      "path": "/ghost",
+      "authenticated": true,
+      "status": 200
+    },
+    {
+      "path": "/",
+      "credentials": "wrong password",
+      "status": 401
+    }
+  ],
+  "health": {
+    "status": "ok",
+    "configured": false,
+    "audio": "browser_asr",
+    "model": "nvidia/nemotron-3-super-120b-a12b",
+    "sandboxes": false,
+    "sources": {
+      "provider": "tavily",
+      "configured": false
+    },
+    "voice": {
+      "name": "Reneė",
+      "accent": "British English",
+      "engine": "kokoro"
+    },
+    "scope": "hosted-demo",
+    "budget": {
+      "model_daily_cap": 200,
+      "session_daily_cap": 40,
+      "used_today": 0
+    }
+  },
+  "tts": {
+    "status": 200,
+    "request_seconds": 2.681,
+    "audio_seconds": 4.875,
+    "sample_rate": 24000,
+    "bytes": 234044,
+    "model_calls": 0,
+    "provider_keys": "not configured"
+  },
+  "internal_voice": {
+    "ok": true,
+    "model": "hexgrad/Kokoro-82M",
+    "voice": "bf_emma",
+    "name": "Reneė",
+    "device": "cpu",
+    "threads": 2
+  },
+  "image_size_bytes": 837721829,
+  "total_build_seconds": null,
+  "timing_note": "Total build wall time was not instrumented; BuildKit export stage took 91.4 seconds.",
+  "newer_checkout_commit": "911d655 (not included in this image or these test results)"
+}
