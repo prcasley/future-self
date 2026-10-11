@@ -2,15 +2,38 @@
 
 [MIT licensed](LICENSE) · Voice-only personal AI · NVIDIA Nemotron on Nebius Token Factory
 
-Talk to the you on the other side of your choices. ECHO listens, remembers, simulates four possible years from your own goals, speaks to you from each one, and runs a live research study on when to push, maintain, or reduce. Formerly FUTURE//SELF.
+Talk to the you on the other side of your choices. ECHO is your future self, one year out: a photoreal face floating in the dark as a Pepper's ghost, speaking in Renée's British voice, powered by NVIDIA Nemotron on Nebius Token Factory. It listens, remembers, turns who you want to become into daily missions, simulates four possible years from your own goals, speaks to you from each one, and runs a live research study on when to push, maintain, or reduce. Formerly FUTURE//SELF. Built for the Nebius × NVIDIA Global AI Hackathon, Personal AI track.
 
-## Planned experience
+<p align="center"><img src="docs/voice/renee-speaking.png" alt="ECHO's face floating on a black ghost stage while Renée speaks" width="640"></p>
 
-Speak with ECHO, a personalized future-self hologram. Set goals, create daily missions, report progress, and correct mistakes by voice. Persistent memory and explainable planning adapt missions to your available time and recent progress.
+## What it does
+
+- **Talk, don't type.** Set goals, get daily missions, report progress and correct mistakes by voice. ECHO keeps goals and explicit memories, confirms changes out loud, and can undo them.
+- **A future self you can see.** ECHO is a living photoreal portrait (yours, or a generated future you) that blinks, breathes and follows your head. **Ghost mode** (`/ghost`) puts it on a pure black stage for a Pepper's ghost: mirror it for a glass or acrylic reflector, or split it four ways for a pyramid, and the face floats in mid-air ([docs/ghost](docs/ghost/README.md)).
+- **Renée, ECHO's voice.** A British woman's voice from Kokoro-82M (`bf_emma`) running on CPU, with the face's mouth driven by the loudness of her real audio. If her service is down, the browser's British female voice takes over and the screen says so.
+- **The Crossing.** Ask for your dream life, the good path, a drift, or the hard road. ECHO simulates 52 weeks of your goals on that side and speaks to you as that future self, grounded only in the simulated numbers.
+- **The Lab.** A research instrument: can an agent tell when to push, maintain, or reduce from daily check-ins, better than a fixed plan, without raising strain? A rule, a learning bandit and Nemotron decide side by side.
+- **Yours to keep or erase.** Export everything by voice as JSON, or delete it all after a spoken yes.
+
+## How NVIDIA Nemotron and Nebius Token Factory are used
+
+Every model call goes to Nebius Token Factory (`https://api.tokenfactory.nebius.com/v1`, OpenAI-compatible) with **`nvidia/nemotron-3-super-120b-a12b`**:
+
+| Where | What Nemotron does |
+| --- | --- |
+| Conversation (`/voice/turn`, streamed) | ECHO's replies, with tool calls that save and correct goals and memories, create missions, start a crossing or a Lab check-in. Tools are validated server-side before anything is committed. |
+| Session start (`/voice/connect`) | The greeting that opens each session; the stage only shows "live" after this real call succeeds. |
+| The Crossing | Narration as each future self, constrained to the simulator's numbers, with no invented events, health outcomes or shame. |
+| The Lab | The model policy, run in shadow next to the rule and the bandit, scored against the next day's check-in. |
+| Face scan | The 52-week projection of seven face proportions (numbers only, no images), bounded and filtered. |
+
+Thinking is turned off for latency (`chat_template_kwargs.enable_thinking=false`). **Token Factory helped** by giving one key and one OpenAI-compatible endpoint for a 120B open NVIDIA model with tool calling and streaming, so a solo builder could ship a voice agent without hosting a large model. Budgets (`MODEL_DAILY_CAP`, `SESSION_DAILY_CAP`) and a ledger that records sizes and timings, never words, keep the hosted demo inside the credit; when they run out, ECHO opens a limited session instead of failing.
+
+Other open models: **Kokoro-82M** (Apache-2.0) for Renée's voice, bundled into the same container on CPU, and Google **MediaPipe** Face Mesh and Selfie Segmentation on-device for the portrait. `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B` is verified in the catalog for planned summaries but not yet wired in.
 
 ## Status
 
-The local prototype is runnable: browser speech input and output, streamed Nebius replies, persistent goals and explicit memories, spoken confirmation, undo, a procedural Three.js human hologram, **the Crossing** (four simulated sides you can talk to) and **the Lab** (the push / maintain / reduce research instrument). The hologram is an original stylized persona with idle/listening/thinking/speaking states, per-side light during a crossing, reduced-motion support and responsive framing. Tap **Photo** and ECHO becomes a **portrait projection of you**, with a wardrobe you change by voice, and a **golden-ratio face scan** maps your proportions and projects them 52 weeks forward. Neither is a 3D reconstruction or phoneme lip-sync. Since September 24 it also opens each session by voice (a first-goal prompt or your mission recap), sizes a daily mission from the Lab, keeps in-app daily check-ins, corrects memories, and lets you export or delete everything by voice ([daily experience](docs/DAILY-EXPERIENCE.md)). A password-protected hosted build is ready to deploy ([hosted demo](docs/DEPLOY.md)). The Lab is a research prototype: it needs real longitudinal data before anyone can claim it improves decisions.
+Runnable locally and as one hosted container ([hosted demo](docs/DEPLOY.md)): browser speech input, streamed Nemotron replies, persistent goals and memories, spoken confirmation and undo, the living portrait and Ghost mode, Renée on CPU with audio-driven mouth movement, the Crossing, the Lab, the golden-ratio face scan, daily missions and check-ins ([daily experience](docs/DAILY-EXPERIENCE.md)), optional Tavily reading links on missions ([mission sources](docs/MISSION-SOURCES.md)), and export and delete by voice. The mouth follows Renée's loudness, not phonemes. The Lab is a research prototype: it needs real longitudinal data before anyone can claim it improves decisions.
 
 ## The Crossing
 
@@ -43,15 +66,15 @@ Right after you choose a photo, or when you say “scan my face”, a scan overl
 
 ## Hosted demo
 
-`Dockerfile` and `railway.toml` build one container. It serves the web app, the face engine's model files and the API (under `/api`) from a single HTTPS origin, behind a demo password, with daily model budgets so judges can't drain the Nebius credits. The health check stays open for the platform. Step-by-step Railway setup, the variables, and the judge checklist are in [docs/DEPLOY.md](docs/DEPLOY.md).
+`Dockerfile` and `railway.toml` build one container. It serves the web app, the face engine's model files and the API (under `/api`) from a single HTTPS origin, behind a demo password, with daily model and voice budgets so judges can't drain the Nebius credits, and runs Renée on CPU on loopback inside the same container. The health check stays open for the platform. Step-by-step Railway setup, the variables, and the judge checklist are in [docs/DEPLOY.md](docs/DEPLOY.md).
 
-## Planned stack
+## Stack
 
-- React and Three.js for the voice stage and particle portrait.
-- FastAPI for conversation and tool orchestration.
-- NVIDIA Nemotron on Nebius Token Factory for reasoning.
-- Speech recognition and synthesis providers to be selected after live capability and latency tests.
-- Persistent goals, missions, preferences, and a reversible action history.
+- React, Three.js and MediaPipe (on-device) for the stage, the living portrait and Ghost mode.
+- FastAPI and SQLite for conversation, tool orchestration and memory.
+- NVIDIA Nemotron 3 Super on Nebius Token Factory for reasoning and tool calls.
+- Kokoro-82M on CPU for Renée's voice; the browser's speech recognition for input.
+- Tavily Search (optional, off without a key) for related reading on missions.
 
 ## Development
 
@@ -91,7 +114,7 @@ Never commit API keys, private photos, recordings, or personal account data.
 | Planned summaries | `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B` | Catalog and reply passed; app integration pending |
 | Planned Omni audio/vision | Not configured | No Omni entry returned by this account's model catalog |
 | Planned images | Not configured | No flux entry in the same catalog; image endpoint untested |
-| Speech output | Browser `speechSynthesis` | Client path implemented; physical audio test pending |
+| Speech output | Renée: `hexgrad/Kokoro-82M`, voice `bf_emma`, CPU | Oct 11: real audio played in the app; warm sentence 0.74 s on an 8-core CPU ([benchmark](docs/voice/cpu-benchmark.json), [sample](docs/voice/renee-sample.wav)). Browser `speechSynthesis` is the fallback |
 | Planned futures | ConTree SDK | Installed during setup; hosted fork test needs project ID |
 
 API base: `https://api.tokenfactory.nebius.com/v1`. Catalog absence does not establish that a separate endpoint is unavailable.
@@ -107,7 +130,8 @@ Run locally, this is a single-user development service on loopback. The hosted d
 **What leaves your device, and where it goes:**
 
 - **Nebius Token Factory (NVIDIA Nemotron):** what you say, your goals and remembered facts, the last 12 turns of the conversation, and the seven face-ratio numbers from a scan (with the side you chose). Nothing is sent without a configured key.
-- **Renée's voice service (`RENEE_TTS_URL`), when deployed:** the text of ECHO's replies, one sentence at a time, so they can be spoken.
+- **Renée's voice service:** the text of ECHO's replies, one sentence at a time, so they can be spoken. In the hosted container she runs on loopback inside the same machine; only an external `RENEE_TTS_URL` sends text elsewhere.
+- **Tavily, only when you tap Find sources and a key is configured:** the mission goal text (at most 400 characters). Nothing else, and nothing automatically.
 - **The future-portrait endpoint (`FUTURE_IMAGE_ENDPOINT`), only in `endpoint` mode:** your photo and the portrait prompt, and only after you tick the consent box for that request. The default `local` mode sends nothing.
 - **Your browser's speech recognition:** your audio, processed by the browser vendor; that traffic never passes through this backend.
 - **Google Fonts:** the stylesheet, requested by the browser.
@@ -128,11 +152,11 @@ cd apps/web
 npm run build
 ```
 
-119 offline backend tests (voice foundation, the Crossing, the Lab, the wardrobe, the face-scan projection, memory corrections, the daily experience, export and delete, the hosted demo's password gate, budgets and rate limit), 51 web unit tests (`node --experimental-strip-types --test tests/*.test.mjs`: stream client, portrait framing/matte, photo storage, golden-ratio measurement, scan layout, the projected face) and the frontend production build pass. The hosted build was reproduced stage by stage and driven in a browser: gate, one-origin page and face engine, a streamed voice turn, export, and delete. The live synthetic goal/correction/confirmation/undo sequence passes. The page was inspected on desktop and at 400px. Physical microphone capture, speech audibility, recognition accuracy and end-to-end latency have not been verified.
+141 offline backend tests (voice foundation, the Crossing, the Lab, the wardrobe, the face-scan projection, memory corrections, the daily experience, export and delete, the hosted demo's password gate, budgets and rate limit, Renée's proxy, mission sources, the hosted entrypoint), 59 web unit tests (`node --experimental-strip-types --test tests/*.test.mjs`: stream client, portrait framing/matte, photo storage, golden-ratio measurement, scan layout, the projected face, Renée's voice queue, the audio envelope that drives the mouth, mission sources) and the frontend production build pass. On Oct 11 a live session on the PC got a real Nemotron greeting through `/voice/connect` and Renée's real audio played to the end in Chrome. The hosted build was reproduced stage by stage and driven in a browser: gate, one-origin page and face engine, a streamed voice turn, export, and delete. Physical microphone capture, recognition accuracy and end-to-end latency on the hosted demo have not been verified yet.
 
 ## Next milestones
 
-The first real deploy (docs/DEPLOY.md), after the key rotation; a microphone test on real hardware; real voice fixtures; Silero VAD and automatic barge-in; sentence-chunk playback; Tavily research receipts on missions; sandbox-backed sides with real image IDs; landmark-driven head turns and jaw motion for the portrait; a guided demo path for judges.
+The first real deploy with Renée bundled ([docs/DEPLOY.md](docs/DEPLOY.md)); a microphone and speaker test on real hardware; Ghost mode on a physical reflector; a guided demo path for judges; automatic barge-in; Nemotron Nano for summaries; sandbox-backed sides.
 
 See [DECISIONS.md](DECISIONS.md), [Claude plan handoff](docs/PLAN.md), [API contract](docs/API.md), [Lab research design](docs/LAB.md), and [prioritized contest checklist](docs/CONTEST-READINESS.md).
 
