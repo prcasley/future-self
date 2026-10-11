@@ -17,7 +17,7 @@ Source: [Official rules](https://nebiusglobalaihackathon.devpost.com/rules). Eli
 
 ## What is already evidenced
 
-Public MIT repository and draft PR; local voice-only stage; successful Super/Nano calls; streamed conversation/tools; SQLite goals and explicit memories; confirmation and undo; 9 backend tests and 2 stream-client tests. Desktop/400px layout inspected. This is a foundation, not a contest-ready product.
+Updated October 11: public MIT repository; streamed Nemotron 3 Super conversation with 14 server-validated tools; a live `/voice/connect` greeting verified on the PC; the living portrait and Ghost mode; Renée's real audio played in the app (warm sentence 0.74 s on CPU) with the mouth driven by her audio; the Crossing, the Lab, daily missions, export and delete; a hosted container with password lockout, daily model, voice and search budgets, and limited sessions when the model is out of budget, refused or unreachable. 151 backend tests, 59 web tests and the production build pass. Agent Factory launch reviews (privacy and security, cost, QA) ran on Oct 11 and their blockers are fixed. Not yet done: the Railway deploy, a real microphone and speaker test of the hosted build, a physical reflector, the video, and any test with real users.
 
 ## Remaining work, in priority order
 
