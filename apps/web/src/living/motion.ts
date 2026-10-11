@@ -228,6 +228,7 @@ export function composePose(
   blink: number,
   mirror: Pose | null,
   seed = 1,
+  audioLevel?: number | null,
 ): Pose {
   const head = idleHead(t, seed);
   const pose: Pose = {
@@ -260,6 +261,9 @@ export function composePose(
     pose.blinkR = Math.max(blink, mirror.blinkR);
     pose.blinkL = Math.max(blink, mirror.blinkL);
     pose.open = Math.max(pose.open, mirror.open);
+  }
+  if (mode === "speaking" && audioLevel != null) {
+    pose.open = Number.isFinite(audioLevel) ? clamp01(audioLevel) : 0;
   }
   return pose;
 }

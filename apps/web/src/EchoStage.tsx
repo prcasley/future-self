@@ -9,6 +9,7 @@ import "./EchoStage.css";
 /** The main stage uses exactly the display renderer used by /ghost. */
 export function EchoStage({
   imageUrl,
+  speechLevel,
   mode,
   config,
   onConfig,
@@ -16,6 +17,7 @@ export function EchoStage({
   onProject,
 }: {
   imageUrl: string | null;
+  speechLevel?: { current: number | null };
   mode: Mode;
   config: GhostConfig;
   onConfig: (patch: Partial<GhostConfig>) => void;
@@ -35,6 +37,7 @@ export function EchoStage({
       <div className="echo-output">
         <GhostProjection
           imageUrl={imageUrl}
+          speechLevel={speechLevel}
           mode={mode}
           config={config}
           onState={(next, message) => {

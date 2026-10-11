@@ -48,6 +48,9 @@ recorded or stored.
 ## Limits
 
 - It is a 2D warp, so it cannot show what a real turn would reveal. Head moves are kept small.
-- The mouth follows a speech rhythm, not phonemes: the browser voice exposes no audio level.
-  An audio-driven or viseme-driven mouth can replace `speechOpen` when a voice provides one.
+- Renée service playback drives the mouth from decoded audio energy at the actual playback
+  position, with a short attack/release envelope. This follows volume and pauses, not phonemes.
+  Browser speech (or a browser without audio decoding) retains the synthetic speech rhythm
+  because browser speech exposes no audio samples. Fetching and interrupted service audio
+  hold the mouth closed; head-follow and blinking continue.
 - Hair and shoulders move with the head as one piece.

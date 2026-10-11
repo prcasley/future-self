@@ -26,6 +26,8 @@ export interface LivingPortraitProps {
   /** Local object URL, data URL or same-origin URL of the portrait. Never uploaded. */
   imageUrl: string | null;
   mode?: Mode;
+  /** Real service audio level; null retains the browser speech rhythm fallback. */
+  speechLevel?: { current: number | null };
   /** Follow the viewer's head through the camera (processed on this device only). */
   mirror?: boolean;
   /** Keep only the person (for compositing into a scene) instead of the whole picture. */
@@ -234,6 +236,7 @@ const GLOW = /* glsl */ `
 export function LivingPortrait({
   imageUrl,
   mode = "idle",
+  speechLevel,
   mirror = false,
   cutout = false,
   accent = "home",
@@ -247,6 +250,8 @@ export function LivingPortrait({
 }: LivingPortraitProps) {
   const host = useRef<HTMLDivElement>(null);
   const modeRef = useRef<Mode>(mode);
+  const speechRef = useRef(speechLevel);
+  speechRef.current = speechLevel;
   const manualRef = useRef<Partial<Pose> | null>(manual);
   const accentRef = useRef<string | null>(accent);
   const mirrorRef = useRef<WebcamMirror | null>(null);
@@ -434,6 +439,7 @@ export function LivingPortrait({
             blinker.at(t),
             mirrorPose,
             7,
+            speechRef.current?.current,
           );
           if (reduced && !mirrorPose)
             pose = { ...pose, yaw: 0, pitch: 0, roll: 0, breathe: 0 };

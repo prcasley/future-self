@@ -18,7 +18,11 @@ import {
 } from "./living/gallery";
 import { normalizePhoto } from "./avatar/preparePortrait";
 import { FaceScan } from "./scan/FaceScan";
-import { createRenee, describe as describeVoice, fetchReneeAudio } from "./voice/renee";
+import {
+  createRenee,
+  describe as describeVoice,
+  fetchReneeAudio,
+} from "./voice/renee";
 import "./style.css";
 
 // Photo commands are handled here, in the browser, so the photo never reaches the server.
@@ -96,12 +100,16 @@ function App() {
   // Renée, ECHO's British voice. The label always names the engine actually speaking.
   const [voiceLabel, setVoiceLabel] = useState("Voice: Renée · British");
   const finishSpeaking = useRef<() => void>(() => {});
+  const speechLevel = useRef<number | null>(0);
   const renee = useRef<ReturnType<typeof createRenee> | null>(null);
   if (!renee.current)
     renee.current = createRenee({
       onIdle: () => finishSpeaking.current(),
       onEngine: (engine) => setVoiceLabel(describeVoice(engine)),
       fetchAudio: fetchReneeAudio,
+      onLevel: (level) => {
+        speechLevel.current = level;
+      },
     });
   const stopVoice = () => renee.current?.cancel();
   const portraitRef = useRef<string | null>(null);
@@ -627,6 +635,7 @@ function App() {
         onConfig={updateGhostConfig}
         onPhoto={(file) => void setSidePortrait(activeSide, file)}
         onControlsChange={() => typedToggle(false)}
+        speechLevel={speechLevel}
         mode={presenceMode}
         running={running}
         onSession={start}
@@ -730,6 +739,7 @@ function App() {
           </div>
           <EchoStage
             imageUrl={activePortrait}
+            speechLevel={speechLevel}
             mode={presenceMode}
             config={ghostConfig}
             onConfig={updateGhostConfig}
@@ -742,7 +752,7 @@ function App() {
               SCENARIO, NOT PREDICTION · PHOTO AND CAMERA STAY ON THIS DEVICE
             </span>
             <p className="runtime-proof">{runtimeLabel}</p>
-        <p className="runtime-proof voice-proof">{voiceLabel}</p>
+            <p className="runtime-proof voice-proof">{voiceLabel}</p>
           </div>
         </section>
         <aside>

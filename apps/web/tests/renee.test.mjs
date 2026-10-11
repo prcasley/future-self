@@ -96,3 +96,48 @@ test("cancel stops the queue without reporting idle", async () => {
   assert.equal(calls, 1);
   assert.equal(idle, 0);
 });
+
+test("a rejected audio play never claims service playback and goes idle", async () => {
+  const engines = [];
+  const levels = [];
+  let idle = 0;
+  globalThis.Audio = class {
+    play() { return Promise.reject(new Error("autoplay blocked")); }
+    pause() {}
+  };
+  const voice = createRenee({ onIdle: () => idle++, onEngine: e => engines.push(e.kind),
+    onLevel: level => levels.push(level), fetchAudio: async () => new Blob(["x"]) });
+  voice.say("Hello.");
+  for (let i = 0; i < 5; i++) await tick();
+  assert.equal(idle, 1);
+  assert.ok(!engines.includes("service"));
+  assert.equal(levels.at(-1), 0);
+});
+
+test("interrupt releases audio and closes the mouth without cancelling the next sentence", async () => {
+  const players = [], released = [], levels = [];
+  let idle = 0, urls = 0;
+  globalThis.URL.createObjectURL = () => `blob:${++urls}`;
+  globalThis.URL.revokeObjectURL = url => released.push(url);
+  globalThis.Audio = class {
+    constructor() { this.paused = false; players.push(this); }
+    play() { return Promise.resolve(); }
+    pause() { this.paused = true; }
+  };
+  const voice = createRenee({ onIdle: () => idle++, onEngine: () => {},
+    onLevel: level => levels.push(level), fetchAudio: async () => new Blob(["x"]) });
+  voice.say("First.");
+  await tick();
+  voice.cancel();
+  voice.say("Second.");
+  await tick();
+  assert.equal(players[0].paused, true);
+  assert.equal(players[1].paused, false);
+  assert.deepEqual(released, ["blob:1"]);
+  assert.equal(idle, 0);
+  players[1].onended();
+  await tick();
+  assert.equal(idle, 1);
+  assert.equal(levels.at(-1), 0);
+  assert.deepEqual(released, ["blob:1", "blob:2"]);
+});

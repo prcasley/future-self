@@ -10,6 +10,7 @@ import "./GhostMode.css";
 /** Output only: no controls, text, status indicators or fallback artwork. */
 export function GhostProjection({
   imageUrl,
+  speechLevel,
   mode,
   config,
   manual,
@@ -17,6 +18,7 @@ export function GhostProjection({
   onMirror,
 }: {
   imageUrl: string | null;
+  speechLevel?: { current: number | null };
   mode: Mode;
   config: GhostConfig;
   manual?: Partial<Pose> | null;
@@ -57,6 +59,7 @@ export function GhostProjection({
       <div className="ghost-source" aria-hidden="true">
         <LivingPortrait
           imageUrl={imageUrl}
+          speechLevel={speechLevel}
           mode={mode}
           mirror={config.follow}
           manual={manual}

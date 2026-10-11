@@ -31,3 +31,21 @@ Git history; submission-period eligibility and dates should be checked against t
 Tavily has no configured key. Do not claim a real Tavily search or bonus qualification
 until a runtime call succeeds with a key. The user wants this deferred dependency
 clearly called out; no key should be pasted into chat or committed.
+
+## 2026-10-11 — Mouth follows Renée's real audio
+
+- Decode the returned WAV into 10 ms energy windows and sample them at the audio
+  element's actual playback position. Smooth attack/release follows syllable volume
+  and silence; this is amplitude sync, not phoneme/viseme synthesis.
+- Share the same level ref with the main stage, `/ghost`, and all pyramid copies.
+  Camera head tracking and blinking remain independent. No microphone analysis,
+  photo upload, or per-frame React state updates are involved.
+- Close the mouth while fetching, on completion, and immediately on interruption.
+  Release interrupted audio URLs and avoid claiming service playback if play fails.
+  Browser voice and unsupported audio decoding keep the existing rhythm fallback.
+- Real Chrome verification: live Nemotron greeting, successful service WAV decode and
+  completed playback; a second actual service sentence produced 33 sampled level
+  frames, peak 0.988, ending at 0. Screenshot: `docs/voice/renee-speaking.png`.
+- Validation: 57 web tests, 123 backend tests and production build passed. New tests
+  cover real-sample energy math, silence, stereo phase, smoothing, head/blink preservation,
+  rejected playback and interruption followed immediately by another sentence.

@@ -27,6 +27,7 @@ export function useGhostRoute(): [boolean, (value: boolean) => void] {
 
 type Props = {
   imageUrl: string | null;
+  speechLevel?: { current: number | null };
   config?: GhostConfig;
   onConfig?: (patch: Partial<GhostConfig>) => void;
   onPhoto?: (file: File) => void;
@@ -44,6 +45,7 @@ type Props = {
 
 export function GhostMode({
   imageUrl,
+  speechLevel,
   config: providedConfig,
   onConfig,
   onPhoto,
@@ -189,6 +191,7 @@ export function GhostMode({
     >
       <GhostProjection
         imageUrl={url}
+        speechLevel={speechLevel}
         mode={mode}
         config={config}
         manual={manual}
