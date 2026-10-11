@@ -2,7 +2,7 @@
 
 Local base: `http://127.0.0.1:8016`. Vite proxies `/api`. OpenAPI: `/openapi.json`; interactive docs: `/docs`.
 
-`POST /voice/text_turn`: JSON `{session_id: UUID, text: string}` with 1–4000 characters. The text comes from browser speech recognition. UTF-8 SSE frames end with a blank line.
+`POST /voice/text_turn`: JSON `{session_id: UUID, text: string}` with 1–1500 characters. The text comes from browser speech recognition. UTF-8 SSE frames end with a blank line.
 
 | Event | Payload |
 | --- | --- |

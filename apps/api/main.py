@@ -177,7 +177,7 @@ def allow_model(session):
 
 class Turn(BaseModel):
     session_id: UUID
-    text: str = Field(min_length=1, max_length=4000)
+    text: str = Field(min_length=1, max_length=1500)
     timezone: str | None = Field(default=None, max_length=100)
 
 
@@ -449,7 +449,7 @@ async def model_turn(state, text, tokens=None, messages=None, tools=TOOLS, max_t
         context = side_context(state)
         if context:
             messages.append({"role": "system", "content": context})
-        messages += state["history"][-12:]
+        messages += state["history"][-8:]
         messages.append({"role": "user", "content": text})
     payload = {
         "model": settings.nebius_super_model,

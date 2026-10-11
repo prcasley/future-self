@@ -33,7 +33,7 @@ export function TypeInstead({
         <textarea
           id="typed-message"
           value={text}
-          maxLength={4000}
+          maxLength={1500}
           rows={2}
           onChange={(e) => setText(e.target.value)}
           placeholder="Type a goal, question, or correction…"

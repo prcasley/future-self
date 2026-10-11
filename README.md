@@ -129,7 +129,7 @@ Run locally, this is a single-user development service on loopback. The hosted d
 
 **What leaves your device, and where it goes:**
 
-- **Nebius Token Factory (NVIDIA Nemotron):** what you say, your goals and remembered facts, today's mission, the last 12 turns of the conversation, the seven face-ratio numbers from a scan (with the side you chose), and, only if you turned the Lab on, your last seven check-ins (sleep, energy, stress, minutes). Web search results are never sent to the model. Nothing is sent without a configured key.
+- **Nebius Token Factory (NVIDIA Nemotron):** what you say, your goals and remembered facts, today's mission, the last 8 turns of the conversation, the seven face-ratio numbers from a scan (with the side you chose), and, only if you turned the Lab on, your last seven check-ins (sleep, energy, stress, minutes). Web search results are never sent to the model. Nothing is sent without a configured key.
 - **Renée's voice service:** the text of ECHO's replies, one sentence at a time, so they can be spoken. In the hosted container she runs on loopback inside the same machine; only an external `RENEE_TTS_URL` sends text elsewhere.
 - **Tavily, only when you tap Find sources and a key is configured:** the mission goal text (at most 400 characters). Nothing else, and nothing automatically.
 - **The future-portrait endpoint (`FUTURE_IMAGE_ENDPOINT`), only in `endpoint` mode:** your photo and the portrait prompt, and only after you tick the consent box for that request. The default `local` mode sends nothing.
