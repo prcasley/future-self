@@ -1,8 +1,10 @@
 # Built during the submission period
 
-This is an incremental record of work on the existing repository, not a claim that
-the entire project was created during the hackathon. Earlier work is preserved in
-Git history; submission-period eligibility and dates should be checked against the rules.
+The whole project was built during the submission period. The hackathon's submission
+period opened on August 26, 2026; this repository's first commit is September 22, 2026
+(`ce89772`), and all of the project's own code, assets and documents came after it
+(third-party models and libraries keep their own licenses). Git history is the complete
+record; this file is a dated log of the larger steps, newest additions at the end.
 
 ## 2026-10-11 — Renée on a real local CPU
 
