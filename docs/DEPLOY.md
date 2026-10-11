@@ -30,6 +30,8 @@ The password is HTTP Basic, so the browser shows its own sign-in box once and th
 | `DEMO_USER` | optional; defaults to `judge` |
 | `MODEL_DAILY_CAP` | model calls per UTC day across everyone; the image defaults to 1500, and `0` turns the cap off |
 | `SESSION_DAILY_CAP` | model-backed turns per session per day; the image defaults to 150, and `0` turns the cap off |
+| `TTS_DAILY_CAP` | Renée voice requests per UTC day across everyone; the image defaults to 3000, and `0` turns the cap off. Over it, the browser's British voice is used |
+| `RATE_LIMIT_PER_MINUTE` | API requests per client IP per minute (the right-most `X-Forwarded-For` address); the image defaults to 120, and `0` turns it off. The page, static files and `/api/health` are not counted |
 | `NEBIUS_PROJECT_ID` | only once the sandbox runner exists |
 
 5. Settings → Networking → Generate Domain. Open `https://<domain>/api/health`; `"scope": "hosted-demo"` means the password gate is on.

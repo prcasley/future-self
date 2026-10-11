@@ -74,6 +74,8 @@ class Settings(BaseSettings):
     web_dist: str = str(ROOT / "apps" / "web" / "dist")
     model_daily_cap: int = 0  # model calls per UTC day across everyone; 0 = unlimited
     session_daily_cap: int = 0  # model-backed turns per session per UTC day; 0 = unlimited
+    tts_daily_cap: int = 0  # Renée voice requests per UTC day across everyone; 0 = unlimited
+    rate_limit_per_minute: int = 0  # hosted demo: API requests per client IP per minute; 0 = off
     future_image_backend: Literal["local", "tokenfactory", "endpoint"] = "local"
     future_image_model: str = ""
     future_image_endpoint: str = ""
@@ -91,6 +93,8 @@ app = FastAPI(title="The Other Side", version="0.5.0")
 locks = defaultdict(asyncio.Lock)
 portrait_budget_lock = Lock()
 session_turns = defaultdict(lambda: ["", 0])  # session -> [UTC date, model-backed turns]
+tts_today = ["", 0]  # [UTC date, Renée voice requests]
+tts_lock = Lock()
 BUDGET_MESSAGE = (
     "This demo has used today's AI budget, so I can't talk freely until tomorrow. Built-in commands "
     "still work, like “what is my mission”, “recap”, “scan my face” and “export my data”."
@@ -99,6 +103,20 @@ BUDGET_MESSAGE = (
 
 def over_budget():
     return bool(settings.model_daily_cap) and store.calls_today() >= settings.model_daily_cap
+
+
+def allow_tts():
+    """Spend one Renée voice request, or say no when today's voice budget is used up."""
+    if not settings.tts_daily_cap:
+        return True
+    today = time.strftime("%Y-%m-%d", time.gmtime())
+    with tts_lock:
+        if tts_today[0] != today:
+            tts_today[:] = [today, 0]
+        if tts_today[1] >= settings.tts_daily_cap:
+            return False
+        tts_today[1] += 1
+    return True
 
 
 def allow_model(session):
@@ -441,6 +459,10 @@ async def model_turn(state, text, tokens=None, messages=None, tools=TOOLS, max_t
                             raise RuntimeError("incomplete_response")
                         status = "ok"
                         return {"content": content, "tool_calls": list(calls.values())}
+        except httpx.HTTPStatusError as error:
+            # A 4xx (bad key, no credit, rate limited, bad request) won't change on a retry.
+            if attempt or received or error.response.status_code < 500:
+                raise RuntimeError("provider_unavailable") from None
         except (httpx.HTTPError, TimeoutError):
             if attempt or received:
                 raise RuntimeError("provider_unavailable") from None
@@ -724,6 +746,8 @@ async def renee_tts(body: SpeechRequest):
     """Renée's voice. Forwards one sentence to the Kokoro service on Nebius and returns WAV audio."""
     if not settings.renee_tts_url:
         raise HTTPException(503, "Renée's voice service isn't deployed, so this browser's British voice is used.")
+    if not allow_tts():
+        raise HTTPException(429, "Renée has used today's voice budget, so this browser's British voice is used.")
     headers = {"Authorization": f"Bearer {settings.renee_tts_key}"} if settings.renee_tts_key else {}
     try:
         async with httpx.AsyncClient(timeout=15) as client:

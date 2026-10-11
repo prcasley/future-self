@@ -922,7 +922,7 @@ export function FaceScan({
               ? projection.disclaimer
               : projectionFailed
                 ? "Projection unavailable right now. The measurements above are from your photo."
-                : "Measured on this device. Only the ratio numbers are sent for the projection."}
+                : "Measured on this device. Only the seven ratio numbers are sent, to NVIDIA Nemotron on Nebius Token Factory, for the projection."}
         </p>
       </div>
     </div>

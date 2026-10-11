@@ -4,7 +4,7 @@ Ghost mode runs the existing living portrait on #000 for a 45-degree Pepper's gh
 
 ## Try it
 
-Repository: `C:\Users\Prat\Documents\Codex\2026-09-22\im-x20\outputs\future-self`, branch `feat/voice-foundation`.
+Repository: `prcasley/future-self`, branch `main`.
 
 1. In one PowerShell terminal at the repository root, start the existing API for conversation:
    ```powershell
@@ -12,7 +12,7 @@ Repository: `C:\Users\Prat\Documents\Codex\2026-09-22\im-x20\outputs\future-self
    ```
 2. In a second terminal:
    ```powershell
-   cd C:\Users\Prat\Documents\Codex\2026-09-22\im-x20\outputs\future-self\apps\web
+   cd future-self/apps/web
    npm run dev
    ```
 3. Open `http://127.0.0.1:5186/ghost`. The browser's saved base photo is restored if available. Otherwise choose `docs/ghost/stand-in.jpg` or a local portrait. Photos selected inside Ghost are page-only and are not uploaded or saved.

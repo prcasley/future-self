@@ -14,7 +14,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     DATABASE=/data/echo.db \
     MODEL_DAILY_CAP=1500 \
-    SESSION_DAILY_CAP=150
+    SESSION_DAILY_CAP=150 \
+    TTS_DAILY_CAP=3000 \
+    RATE_LIMIT_PER_MINUTE=120
 WORKDIR /app
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt

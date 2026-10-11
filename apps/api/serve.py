@@ -6,14 +6,17 @@ Local development is unchanged (Vite on 5186 proxies /api to apps.api.main on 80
 
 The page, the on-device face engine's model files (/mediapipe/...) and the API share one origin, so
 the browser's microphone and speech permissions apply to one site. Every path except the health
-check needs the demo password (HTTP Basic: DEMO_USER / DEMO_PASSWORD), and the daily model budgets
-in main.Settings protect the Nebius credits.
+check needs the demo password (HTTP Basic: DEMO_USER / DEMO_PASSWORD), the daily model and voice
+budgets in main.Settings protect the Nebius credits, and RATE_LIMIT_PER_MINUTE caps API requests
+per client IP.
 """
 
 import base64
 import binascii
 import hmac
 import mimetypes
+import time
+from collections import deque
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -88,6 +91,60 @@ class PasswordGate:
         )
 
 
+class RateLimit:
+    """Sliding one-minute window of API requests per client IP. Static files are not counted.
+
+    Behind Railway's proxy the client is the right-most X-Forwarded-For entry: the edge appends the
+    address it saw, while anything to its left came from the client and can be forged.
+    """
+
+    def __init__(self, app, per_minute: int, window: float = 60.0):
+        self.app = app
+        self.per_minute = per_minute
+        self.window = window
+        self.hits: dict[str, deque] = {}
+        self.swept = time.monotonic()
+
+    def client(self, scope) -> str:
+        forwarded = dict(scope.get("headers", [])).get(b"x-forwarded-for", b"").decode("latin-1")
+        if forwarded.strip():
+            return forwarded.split(",")[-1].strip()
+        return (scope.get("client") or ("unknown", 0))[0]
+
+    def allow(self, ip: str) -> bool:
+        now = time.monotonic()
+        if now - self.swept > self.window:
+            self.hits = {k: v for k, v in self.hits.items() if v and now - v[-1] < self.window}
+            self.swept = now
+        hits = self.hits.setdefault(ip, deque())
+        while hits and now - hits[0] >= self.window:
+            hits.popleft()
+        if len(hits) >= self.per_minute:
+            return False
+        hits.append(now)
+        return True
+
+    async def __call__(self, scope, receive, send):
+        path = scope.get("path", "")
+        if scope["type"] != "http" or not path.startswith("/api/") or path in OPEN_PATHS:
+            await self.app(scope, receive, send)
+            return
+        if self.allow(self.client(scope)):
+            await self.app(scope, receive, send)
+            return
+        await send({
+            "type": "http.response.start",
+            "status": 429,
+            "headers": [
+                (b"retry-after", str(int(self.window)).encode()),
+                (b"content-type", b"text/plain; charset=utf-8"),
+                (b"cache-control", b"no-store"),
+                *SECURITY_HEADERS,
+            ],
+        })
+        await send({"type": "http.response.body", "body": b"Too many requests. Wait a minute and try again."})
+
+
 def create_app():
     dist = Path(settings.web_dist)
     if not (dist / "index.html").exists():
@@ -97,6 +154,7 @@ def create_app():
     root = FastAPI(title="The Other Side", docs_url=None, redoc_url=None, openapi_url=None)
     root.mount("/api", api)
     root.mount("/", StaticFiles(directory=dist, html=True), name="web")
-    if settings.demo_password:
-        return PasswordGate(root, settings.demo_user, settings.demo_password)
-    return root
+    site = PasswordGate(root, settings.demo_user, settings.demo_password) if settings.demo_password else root
+    if settings.rate_limit_per_minute:
+        return RateLimit(site, settings.rate_limit_per_minute)
+    return site

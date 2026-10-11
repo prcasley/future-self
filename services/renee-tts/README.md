@@ -10,7 +10,8 @@ so Renée uses Kokoro; Nemotron on Nebius Token Factory still does all of ECHO's
 - `GET /health` → `{"ok": true, "model": "hexgrad/Kokoro-82M", "voice": "bf_emma", "name": "Renée"}`
 - `POST /synthesize` with `{"text": "Good evening.", "voice": "bf_emma", "speed": 1.0}` → `audio/wav` (24 kHz, 16-bit).
   Only British voices are accepted: `bf_emma` (default), `bf_isabella`, `bf_alice`, `bf_lily`.
-  If `RENEE_TTS_KEY` is set, send `Authorization: Bearer <key>`.
+  Send `Authorization: Bearer <RENEE_TTS_KEY>`. The service refuses to start without `RENEE_TTS_KEY`
+  unless `RENEE_TTS_OPEN=1` is set, which is only for a local test that nothing else can reach.
 
 ## Run locally
 
@@ -25,7 +26,7 @@ Then set `RENEE_TTS_URL=http://127.0.0.1:8000` and `RENEE_TTS_KEY=dev` in the re
 
 1. Push the image to a registry Nebius can pull from (for example Nebius Container Registry).
 2. Create a Serverless Endpoint from that image, port 8000. Kokoro is small: a CPU preset works,
-   a small GPU preset is faster. Set `RENEE_TTS_KEY` as a secret.
+   a small GPU preset is faster, but an always-on GPU through Dec 15 can cost thousands of dollars, so prefer a CPU preset that scales to zero. Set `RENEE_TTS_KEY` as a secret.
 3. Put the endpoint's HTTPS URL in `RENEE_TTS_URL` (and the key in `RENEE_TTS_KEY`) for the main API.
    `GET /api/health` then reports `"engine": "kokoro-nebius"` and the app labels the voice
    "Renée · British · Kokoro on Nebius".

@@ -138,3 +138,24 @@ def test_local_runs_have_no_caps(budget):
     for _ in range(5):
         say(client, session, "Keep going")
     assert len(calls) == 5
+
+
+def test_api_rate_limit_per_client_ip(site, monkeypatch):
+    monkeypatch.setattr(main.settings, "rate_limit_per_minute", 3)
+    limited = TestClient(serve.create_app())
+    a = {**auth(), "X-Forwarded-For": "6.6.6.6, 1.1.1.1"}
+    b = {**auth(), "X-Forwarded-For": "6.6.6.6, 2.2.2.2"}
+    codes = [limited.get(f"/api/state/{uuid4()}", headers=a).status_code for _ in range(4)]
+    assert all(code != 429 for code in codes[:3]) and codes[3] == 429
+    blocked = limited.get(f"/api/state/{uuid4()}", headers=a)
+    assert blocked.headers["retry-after"] == "60"
+    # A forged left-hand entry doesn't share a bucket; the proxy-appended address decides.
+    assert limited.get(f"/api/state/{uuid4()}", headers=b).status_code != 429
+    # The page, static files and the health check are never counted.
+    assert limited.get("/", headers=a).status_code == 200
+    assert limited.get("/api/health", headers=a).status_code == 200
+
+
+def test_rate_limit_is_off_unless_configured(site, monkeypatch):
+    monkeypatch.setattr(main.settings, "rate_limit_per_minute", 0)
+    assert not isinstance(serve.create_app(), serve.RateLimit)

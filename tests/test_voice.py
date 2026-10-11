@@ -173,3 +173,22 @@ def test_upstream_retries_once_and_logs_attempts(client, monkeypatch):
         asyncio.run(main.model_turn(main.store.load("test"), "hello"))
     assert len(attempts) == 2
     assert len(main.store.ledger()) == 2
+
+
+@pytest.mark.parametrize("status", [401, 402, 429])
+def test_upstream_4xx_is_not_retried(client, monkeypatch, status):
+    # A bad key, no credit or a provider rate limit won't change on a retry, so it costs one call.
+    attempts = []
+
+    def handler(request):
+        attempts.append(1)
+        return httpx.Response(status)
+
+    original = httpx.AsyncClient
+    transport = httpx.MockTransport(handler)
+    monkeypatch.setattr(main.httpx, "AsyncClient", lambda **kwargs: original(transport=transport, **kwargs))
+    monkeypatch.setattr(main.settings, "nebius_api_key", "test-only")
+    with pytest.raises(RuntimeError, match="provider_unavailable"):
+        asyncio.run(main.model_turn(main.store.load("test"), "hello"))
+    assert len(attempts) == 1
+    assert len(main.store.ledger()) == 1

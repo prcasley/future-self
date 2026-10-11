@@ -102,7 +102,17 @@ Initial single-call observations: Super 4,531ms and Nano 486ms. With thinking di
 
 Browser recognition → transcript → FastAPI → SQLite context → Nebius Super stream → validated tool → committed state → captions and browser speech.
 
-This is a **single-user loopback-only development service**. Session IDs are not authentication. SQLite is stored in ignored `local-data/echo.db`; localStorage retains a browser session ID. Prompts and selected context go to Nebius. Browser recognition may process audio remotely; that traffic is outside the backend ledger. No analytics are included. The one remote request is the Google Fonts stylesheet. A photo chosen with **Photo** is processed and stored only in the browser (IndexedDB) and never reaches the backend; the face engine's model files are served by this app. The server keeps only the outfit and aura names, and the face scan sends it only seven ratio numbers (which the model sees, with the side).
+Run locally, this is a single-user development service on loopback. The hosted demo (`apps/api/serve.py`, see `docs/DEPLOY.md`) puts the same app behind one shared password, daily model and voice budgets, and a per-IP rate limit. Session IDs are not authentication.
+
+**What leaves your device, and where it goes:**
+
+- **Nebius Token Factory (NVIDIA Nemotron):** what you say, your goals and remembered facts, the last 12 turns of the conversation, and the seven face-ratio numbers from a scan (with the side you chose). Nothing is sent without a configured key.
+- **Renée's voice service (`RENEE_TTS_URL`), when deployed:** the text of ECHO's replies, one sentence at a time, so they can be spoken.
+- **The future-portrait endpoint (`FUTURE_IMAGE_ENDPOINT`), only in `endpoint` mode:** your photo and the portrait prompt, and only after you tick the consent box for that request. The default `local` mode sends nothing.
+- **Your browser's speech recognition:** your audio, processed by the browser vendor; that traffic never passes through this backend.
+- **Google Fonts:** the stylesheet, requested by the browser.
+
+**What stays:** a photo chosen with **Photo** or scanned is processed and stored only in the browser (IndexedDB). The server stores your goals, facts, the last 20 conversation turns and outfit and aura names in SQLite (`local-data/echo.db` locally, the `/data` volume when hosted) until you delete them; there is no automatic expiry. The model-call ledger records sizes, timings and status, never your words. No analytics are included.
 
 Forgetting removes an explicit fact from active recall and clears recent context and undo snapshots after confirmation. Say “export my data” and the browser downloads everything the server keeps for your session as JSON. Say “delete all my data” and, after a spoken yes, the server deletes the session's stored row and the browser deletes your photo. None of this is secure disk erasure or deletion of provider records. Multi-device identity remains planned.
 
@@ -118,7 +128,7 @@ cd apps/web
 npm run build
 ```
 
-Seventy-eight offline backend tests (voice foundation, the Crossing, the Lab, the wardrobe, the face-scan projection, memory corrections, the daily experience, export and delete, the hosted demo's password gate and budgets), twenty-four web unit tests (`node --experimental-strip-types --test tests/*.test.mjs`: stream client, portrait framing/matte, photo storage, golden-ratio measurement, scan layout, the projected face) and the frontend production build pass. The hosted build was reproduced stage by stage and driven in a browser: gate, one-origin page and face engine, a streamed voice turn, export, and delete. The live synthetic goal/correction/confirmation/undo sequence passes. The page was inspected on desktop and at 400px. Physical microphone capture, speech audibility, recognition accuracy and end-to-end latency have not been verified.
+119 offline backend tests (voice foundation, the Crossing, the Lab, the wardrobe, the face-scan projection, memory corrections, the daily experience, export and delete, the hosted demo's password gate, budgets and rate limit), 51 web unit tests (`node --experimental-strip-types --test tests/*.test.mjs`: stream client, portrait framing/matte, photo storage, golden-ratio measurement, scan layout, the projected face) and the frontend production build pass. The hosted build was reproduced stage by stage and driven in a browser: gate, one-origin page and face engine, a streamed voice turn, export, and delete. The live synthetic goal/correction/confirmation/undo sequence passes. The page was inspected on desktop and at 400px. Physical microphone capture, speech audibility, recognition accuracy and end-to-end latency have not been verified.
 
 ## Next milestones
 
