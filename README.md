@@ -8,7 +8,7 @@ Talk to the you on the other side of your choices. ECHO is your future self, one
 
 ## What it does
 
-- **Talk, don't type.** Set goals, get daily missions, report progress and correct mistakes by voice. ECHO keeps goals and explicit memories, confirms changes out loud, and can undo them.
+- **Talk, don't type.** A real back-and-forth: Reneė answers sentence by sentence, you can cut in mid-sentence, and the mic switches off when you say goodbye or go quiet. Set goals, get daily missions, report progress and correct mistakes by voice. ECHO keeps goals and explicit memories, confirms changes out loud, and can undo them.
 - **A future self you can see.** ECHO is a living photoreal portrait (yours, or a generated future you) that blinks, breathes and follows your head. **Ghost mode** (`/ghost`) puts it on a pure black stage for a Pepper's ghost: mirror it for a glass or acrylic reflector, or split it four ways for a pyramid, and the face floats in mid-air ([docs/ghost](docs/ghost/README.md)).
 - **Reneė, ECHO's voice.** A British woman's voice from Kokoro-82M (`bf_emma`) running on CPU, with the face's mouth driven by the loudness of her real audio. If her service is down, the browser's British female voice takes over and the screen says so.
 - **The Crossing.** Ask for your dream life, the good path, a drift, or the hard road. ECHO simulates 52 weeks of your goals on that side and speaks to you as that future self, grounded only in the simulated numbers.
@@ -102,7 +102,7 @@ npm run dev
 
 Open **http://127.0.0.1:5186**, click Start session and allow your microphone. Try “My career goal is to build my first app. Save that goal,” then “Change my career goal to learning Python,” “Yes,” and “Undo that.” Also try “Remember I work best in the morning” and “Show my memory.” Then “Show me my dream life,” “Come back,” “Turn on the lab,” “Yes,” and “Check in: slept six, energy three, stress four, forty minutes, done.” Tap **Photo**, then say “Scan my face,” “Close,” and “Put on the monarch armor.”
 
-Press Space with the page focused to interrupt ECHO. Mute silences output; End session stops recognition. Recognition pauses during playback to avoid transcribing ECHO's own speech. Automatic barge-in is still planned.
+Talking to ECHO is a back-and-forth conversation: Reneė starts speaking as soon as the first sentence of a reply arrives, and if you start talking while she speaks, she stops and ECHO listens (barge-in, using the browser's echo cancellation; Space or **Interrupt ECHO** also work). The microphone is never left on: **Stop listening**, or saying “stop listening” / “goodbye ECHO”, ends listening and releases the mic, and ECHO pauses on its own after a quiet minute. Mute silences output.
 
 Never commit API keys, private photos, recordings, or personal account data.
 
@@ -156,7 +156,7 @@ npm run build
 
 ## Next milestones
 
-The first real deploy with Reneė bundled ([docs/DEPLOY.md](docs/DEPLOY.md)); a microphone and speaker test on real hardware; Ghost mode on a physical reflector; a guided demo path for judges; automatic barge-in; Nemotron Nano for summaries; sandbox-backed sides.
+The first real deploy with Reneė bundled ([docs/DEPLOY.md](docs/DEPLOY.md)); a microphone and speaker test on real hardware; Ghost mode on a physical reflector; a guided demo path for judges; tuning barge-in on real speakers; Nemotron Nano for summaries; sandbox-backed sides.
 
 See [DECISIONS.md](DECISIONS.md), [Claude plan handoff](docs/PLAN.md), [API contract](docs/API.md), [Lab research design](docs/LAB.md), and [prioritized contest checklist](docs/CONTEST-READINESS.md).
 

@@ -24,6 +24,12 @@ import {
   describe as describeVoice,
   fetchReneeAudio,
 } from "./voice/renee";
+import {
+  QUIET_PAUSE_MS,
+  createBargeIn,
+  createSentenceStream,
+  isStopCommand,
+} from "./voice/conversation";
 import "./style.css";
 
 // Photo commands are handled here, in the browser, so the photo never reaches the server.
@@ -142,6 +148,11 @@ function App() {
   const speaking = useRef(false);
   const generation = useRef(0);
   const busy = useRef(false);
+  // Conversation: barge-in watcher, last time anything was said or heard, and why it ended.
+  const bargeIn = useRef<Awaited<ReturnType<typeof createBargeIn>>>(null);
+  const lastActivity = useRef(0);
+  const quietTimer = useRef<number | null>(null);
+  const endedStatus = useRef("Session ended");
   useEffect(() => {
     let alive = true;
     let pending = false;
@@ -332,8 +343,9 @@ function App() {
       }
     }
   };
-  const speak = (text: string) => {
-    setSaid(text);
+  const speak = (text: string, chunk = false) => {
+    if (!chunk) setSaid(text);
+    lastActivity.current = Date.now();
     if (mutedRef.current) {
       setStatus(listeningText());
       listen();
@@ -349,19 +361,32 @@ function App() {
     );
     const speechGeneration = generation.current;
     const voice = VOICES[sideRef.current || "home"] || VOICES.home;
+    // Talking over Reneė cuts her off and ECHO listens (barge-in).
+    if (enabled.current && !noSpeech.current) bargeIn.current?.arm();
     // Listening resumes once, when Reneė has finished every queued sentence.
     finishSpeaking.current = () => {
       if (speechGeneration !== generation.current) return;
+      bargeIn.current?.disarm();
       speaking.current = false;
       setTalking(false);
+      lastActivity.current = Date.now();
+      // Still streaming the reply: the next sentence is on its way, so don't start listening yet.
+      if (busy.current) return;
       if (enabled.current) {
         setStatus(listeningText());
         listen();
-      }
+      } else setStatus(endedStatus.current);
     };
     renee.current?.say(text, voice.rate, voice.pitch);
   };
   const submit = async (text: string, spoken = true) => {
+    lastActivity.current = Date.now();
+    if (spoken && isStopCommand(text)) {
+      setHeard(text);
+      endSession("Stopped listening. Tap Start session to talk again.");
+      speak("Okay. I'll be right here.");
+      return true;
+    }
     const id = ++generation.current;
     busy.current = true;
     recognition.current?.abort();
@@ -385,6 +410,7 @@ function App() {
     controller.current = abort;
     setStatus("Thinking");
     let partial = "";
+    const sentences = createSentenceStream();
     let failed = false;
     // An outfit only shows on the portrait; without a photo, say how to add one.
     let hint = "";
@@ -432,6 +458,8 @@ function App() {
         if (item.event === "token") {
           partial += item.data.text;
           setSaid(partial);
+          // Reneė starts on the first finished sentence instead of waiting for the whole reply.
+          for (const sentence of sentences.feed(partial)) speak(sentence, true);
         }
         if (item.event === "state") {
           sideRef.current = item.data.side;
@@ -463,7 +491,14 @@ function App() {
         )
           hint = " Tap Photo and I'll wear it as you.";
         if (item.event === "tool_result") setDid(item.data.text);
-        if (item.event === "sentence") speak(item.data.text + hint);
+        if (item.event === "sentence") {
+          if (!sentences.started) speak(item.data.text + hint);
+          else {
+            setSaid(item.data.text + hint);
+            const rest = sentences.rest(item.data.text) + hint;
+            if (rest.trim()) speak(rest.trim(), true);
+          }
+        }
         if (item.event === "error") speak(item.data.text);
       }
     } catch (error) {
@@ -498,21 +533,43 @@ function App() {
     }
     return !failed && id === generation.current;
   };
+  /** Stop listening and release the microphone. The mic is never left on. */
+  const endSession = (reason: string) => {
+    endedStatus.current = reason;
+    enabled.current = false;
+    setRunning(false);
+    runtimeRef.current = false;
+    setRuntime(null);
+    ++generation.current;
+    busy.current = false;
+    controller.current?.abort();
+    controller.current = null;
+    recognition.current?.abort();
+    stopVoice();
+    speaking.current = false;
+    setTalking(false);
+    bargeIn.current?.close();
+    bargeIn.current = null;
+    if (quietTimer.current !== null) window.clearInterval(quietTimer.current);
+    quietTimer.current = null;
+    setStatus(reason);
+  };
+  /** After a quiet minute ECHO stops listening on its own. */
+  const watchQuiet = () => {
+    lastActivity.current = Date.now();
+    if (quietTimer.current !== null) window.clearInterval(quietTimer.current);
+    quietTimer.current = window.setInterval(() => {
+      if (!enabled.current || busy.current || speaking.current || typing.current) {
+        if (typing.current) lastActivity.current = Date.now();
+        return;
+      }
+      if (Date.now() - lastActivity.current > QUIET_PAUSE_MS)
+        endSession("Paused after a quiet minute. Tap Start session to talk again.");
+    }, 5000);
+  };
   const start = () => {
     if (enabled.current) {
-      enabled.current = false;
-      setRunning(false);
-      runtimeRef.current = false;
-      setRuntime(null);
-      ++generation.current;
-      busy.current = false;
-      controller.current?.abort();
-      controller.current = null;
-      recognition.current?.abort();
-      stopVoice();
-      speaking.current = false;
-      setTalking(false);
-      setStatus("Session ended");
+      endSession("Session ended. Tap Start session to talk again.");
       return;
     }
     if (!window.isSecureContext) {
@@ -537,6 +594,7 @@ function App() {
     rec.interimResults = true;
     recognition.current = rec;
     rec.onresult = (e: any) => {
+      lastActivity.current = Date.now();
       if (
         !enabled.current ||
         typing.current ||
@@ -581,6 +639,13 @@ function App() {
     enabled.current = true;
     setRunning(true);
     setStatus(listeningText());
+    watchQuiet();
+    void createBargeIn(() => {
+      if (speaking.current && enabled.current) interrupt();
+    }).then((watcher) => {
+      if (enabled.current) bargeIn.current = watcher;
+      else watcher?.close();
+    });
     try {
       if (!typing.current) rec.start();
       void submit("start my day", false);
@@ -593,6 +658,8 @@ function App() {
     }
   };
   const interrupt = () => {
+    bargeIn.current?.disarm();
+    lastActivity.current = Date.now();
     ++generation.current;
     busy.current = false;
     controller.current?.abort();
@@ -682,7 +749,7 @@ function App() {
         </a>
         <div className="controls">
           <button className="primary" onClick={start}>
-            {running ? "End session" : "Start session"}
+            {running ? "Stop listening" : "Start session"}
           </button>
           {running && (
             <button className="interrupt-echo" onClick={interrupt}>

@@ -30,6 +30,7 @@ Most goal apps are checklists. What actually changes behaviour is a conversation
 
 - **You talk, ECHO listens.** Speak your goals; ECHO keeps them and your stated facts, confirms changes out loud, and can undo. Each day it sizes one mission to your capacity.
 - **Your future self, floating.** ECHO is a photoreal living portrait that blinks, breathes and follows your head. Ghost mode puts it on pure black, mirrored for a glass or acrylic reflector or split four ways for a pyramid, so the face appears to hang in mid-air.
+- **A real conversation.** Reneė starts answering as the first sentence arrives, you can talk over her to cut in, and the microphone switches off when you say goodbye, press Stop listening, or go quiet for a minute.
 - **Reneė's voice.** ECHO speaks in a British woman's voice (Kokoro-82M on CPU), and the face's mouth moves with the loudness of her real audio.
 - **The Crossing.** "Show me my dream life", "what if I drift", "show me the hard road": ECHO simulates 52 weeks of your goals on that path and speaks to you as that future self, using only the simulated numbers, never invented events.
 - **The Lab.** An honest research instrument: from daily voice check-ins (sleep, energy, stress, minutes), a transparent rule, a learning bandit and Nemotron each recommend push, maintain or reduce; one is applied, all are logged and scored the next day.
@@ -62,7 +63,7 @@ Most goal apps are checklists. What actually changes behaviour is a conversation
 
 ## What's next
 
-A physical display (the long-term goal is a standalone object that projects ECHO, like a crystal or acrylic prism), automatic barge-in, Nemotron Nano for fast summaries, sandbox-backed futures, and a longitudinal study for the Lab.
+A physical display (the long-term goal is a standalone object that projects ECHO, like a crystal or acrylic prism), Nemotron Nano for fast summaries, sandbox-backed futures, and a longitudinal study for the Lab.
 
 ## Built with
 

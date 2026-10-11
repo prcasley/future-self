@@ -81,3 +81,16 @@ Voice service: localhost:8000 (CPU). Verification API: localhost:8018 with isola
 These are local development processes, not an installed auto-start service.
 For the normal app, follow `services/renee-tts/README.md` and restart its API so it
 reads the configured ignored `.env`. No changes were pushed.
+
+## 2026-10-11 — A Jarvis-style conversation, with a real off switch
+
+- Reneė now speaks each sentence as soon as it streams in from Nemotron instead of waiting for the
+  whole reply, and the end of the reply never repeats what she already said.
+- Barge-in: while she speaks, the microphone (browser echo cancellation on) is watched; sustained
+  speech above the learned room level cuts her off and ECHO listens. Space and Interrupt ECHO still work.
+- The mic is never permanently on: **Stop listening**, the spoken commands "stop listening",
+  "goodbye ECHO", "that's all" and similar end listening and release the microphone, and ECHO
+  pauses by itself after a quiet minute.
+- Verified in headless Chromium against a test-only streaming stub: a three-sentence reply was spoken
+  as three chunks while streaming, "stop listening" ended the session, and a quiet minute paused it.
+  Barge-in itself needs a real microphone and speakers; ChatGPT on the PC tests it next.
