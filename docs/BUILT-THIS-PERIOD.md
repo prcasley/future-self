@@ -107,3 +107,11 @@ Fixes from ChatGPT's source review of the conversation loop on the PC:
   still stops, but only right after a barge-in.
 - Validation: 66 web tests and the production build pass. A real microphone and speakers are still needed to
   measure barge-in; that test is prepared on the PC.
+
+## 2026-10-11 — Hosted Docker image verified on the PC
+
+- Built `the-other-side:local-0f52d35` with Python 3.12 and bundled CPU Kokoro/bf_emma. Docker reports 837,721,829 bytes. Excluded nested local virtual environments and `work/` from the build context.
+- Seven real HTTP checks passed: public health, denied unauthenticated app/ghost/state, accepted authenticated app/ghost, rejected wrong password. The container remains bound to 127.0.0.1:8090.
+- Authenticated voice synthesis returned a real 234,044-byte, 24 kHz WAV: 4.875 seconds of speech in 2.681 seconds on two CPU threads. No Nebius or Tavily keys were configured, and no paid model calls were made.
+- Evidence and limits: `docs/voice/container-verification.json`, `docs/voice/renee-container-sample.wav`, and `docs/voice/DOCKER-CHECK.md`. Total Docker build wall time was not instrumented; the export stage took 91.4 seconds.
+- These results cover 0f52d35. Claude advanced the checkout to 911d655 while verification was being documented; that newer code is not in this image. Physical microphone/speaker acceptance remains pending.
