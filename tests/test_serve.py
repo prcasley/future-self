@@ -8,8 +8,10 @@ from fastapi.testclient import TestClient
 from apps.api import main, serve
 from apps.api.store import Store
 
+PASSWORD = "open-sesame-to-the-other-side"
 
-def auth(user="judge", password="open-sesame"):
+
+def auth(user="judge", password=PASSWORD):
     token = base64.b64encode(f"{user}:{password}".encode()).decode()
     return {"Authorization": f"Basic {token}"}
 
@@ -30,7 +32,7 @@ def site(tmp_path, monkeypatch):
     (dist / "mediapipe" / "face_mesh" / "model.binarypb").write_bytes(b"pb")
     monkeypatch.setattr(main, "store", Store(str(tmp_path / "hosted.db")))
     monkeypatch.setattr(main.settings, "web_dist", str(dist))
-    monkeypatch.setattr(main.settings, "demo_password", "open-sesame")
+    monkeypatch.setattr(main.settings, "demo_password", PASSWORD)
     monkeypatch.setattr(main.settings, "demo_open", False)
     return TestClient(serve.create_app())
 
@@ -73,11 +75,14 @@ def test_voice_turns_stream_through_the_gate(site):
 
 def test_the_server_refuses_to_start_without_a_password_or_a_build(tmp_path, monkeypatch):
     monkeypatch.setattr(main.settings, "web_dist", str(tmp_path / "missing"))
-    monkeypatch.setattr(main.settings, "demo_password", "x")
+    monkeypatch.setattr(main.settings, "demo_password", PASSWORD)
     with pytest.raises(RuntimeError, match="No web build"):
         serve.create_app()
     (tmp_path / "missing").mkdir()
     (tmp_path / "missing" / "index.html").write_text("ok")
+    monkeypatch.setattr(main.settings, "demo_password", "short")
+    with pytest.raises(RuntimeError, match="at least 16"):
+        serve.create_app()
     monkeypatch.setattr(main.settings, "demo_password", "")
     monkeypatch.setattr(main.settings, "demo_open", False)
     with pytest.raises(RuntimeError, match="DEMO_PASSWORD"):
@@ -159,3 +164,24 @@ def test_api_rate_limit_per_client_ip(site, monkeypatch):
 def test_rate_limit_is_off_unless_configured(site, monkeypatch):
     monkeypatch.setattr(main.settings, "rate_limit_per_minute", 0)
     assert not isinstance(serve.create_app(), serve.RateLimit)
+
+
+def test_wrong_passwords_lock_out_that_ip_only(site):
+    guesser = {"X-Forwarded-For": "9.9.9.9"}
+    for _ in range(serve.PasswordGate.MAX_FAILURES):
+        assert site.get("/", headers={**auth(password="guess"), **guesser}).status_code == 401
+    locked = site.get("/", headers={**auth(), **guesser})
+    assert locked.status_code == 429 and locked.headers["retry-after"] == "600"
+    # Another judge is unaffected, and a first visit without credentials is not a failure.
+    assert site.get("/", headers={**auth(), "X-Forwarded-For": "8.8.8.8"}).status_code == 200
+    for _ in range(serve.PasswordGate.MAX_FAILURES + 5):
+        assert site.get("/", headers={"X-Forwarded-For": "7.7.7.7"}).status_code == 401
+    assert site.get("/", headers={**auth(), "X-Forwarded-For": "7.7.7.7"}).status_code == 200
+
+
+def test_websockets_never_bypass_the_password(site):
+    from starlette.websockets import WebSocketDisconnect
+
+    with pytest.raises(WebSocketDisconnect):
+        with site.websocket_connect("/api/anything"):
+            pass

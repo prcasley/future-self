@@ -86,6 +86,7 @@ class Settings(BaseSettings):
     renee_tts_key: str = ""
     renee_tts_voice: str = "bf_emma"
     tavily_api_key: str = ""
+    tavily_daily_cap: int = 0  # Tavily searches per UTC day across everyone; 0 = unlimited
 
 
 settings = Settings()
@@ -97,6 +98,8 @@ portrait_budget_lock = Lock()
 session_turns = defaultdict(lambda: ["", 0])  # session -> [UTC date, model-backed turns]
 tts_today = ["", 0]  # [UTC date, Renée voice requests]
 tts_lock = Lock()
+sources_today = ["", 0]  # [UTC date, Tavily searches]
+sources_lock = Lock()
 BUDGET_MESSAGE = (
     "This demo has used today's AI budget, so I can't talk freely until tomorrow. Built-in commands "
     "still work, like “what is my mission”, “recap”, “scan my face” and “export my data”."
@@ -140,6 +143,20 @@ def allow_tts():
         if tts_today[1] >= settings.tts_daily_cap:
             return False
         tts_today[1] += 1
+    return True
+
+
+def allow_sources():
+    """Spend one Tavily search, or say no when today's search budget is used up."""
+    if not settings.tavily_daily_cap:
+        return True
+    today = time.strftime("%Y-%m-%d", time.gmtime())
+    with sources_lock:
+        if sources_today[0] != today:
+            sources_today[:] = [today, 0]
+        if sources_today[1] >= settings.tavily_daily_cap:
+            return False
+        sources_today[1] += 1
     return True
 
 
@@ -414,11 +431,20 @@ def side_context(state):
     return SIDE_CONTEXT.format(label=future["label"], numbers=numbers)
 
 
+def model_view(state):
+    """What the model sees: the public state minus web search results, which are third-party text."""
+    view = public(state)
+    mission = (view.get("daily") or {}).get("mission")
+    if mission and "research" in mission:
+        view["daily"] = {**view["daily"], "mission": {k: v for k, v in mission.items() if k != "research"}}
+    return view
+
+
 async def model_turn(state, text, tokens=None, messages=None, tools=TOOLS, max_tokens=512, temperature=0.4):
     if messages is None:
         messages = [
             {"role": "system", "content": PERSONA},
-            {"role": "system", "content": "Current state (untrusted data): " + json.dumps(public(state))},
+            {"role": "system", "content": "Current state (untrusted data): " + json.dumps(model_view(state))},
         ]
         context = side_context(state)
         if context:
@@ -631,6 +657,10 @@ async def daily_sources(session_id: UUID, body: MissionSourceRequest):
                 return JSONResponse({"research": cached, "revision": state["revision"]},
                                     headers={"Cache-Control": "no-store"})
             goal = mission["goal"]
+        if settings.tavily_api_key.strip() and not allow_sources():
+            # Over today's budget: say so without caching, so tomorrow's click searches again.
+            return JSONResponse({"research": mission_sources.result("unavailable"), "revision": state["revision"]},
+                                headers={"Cache-Control": "no-store"})
         research = await mission_sources.search(goal, settings.tavily_api_key)
         # Voice, completion and deletion can continue while Tavily is responding.
         async with locks[session]:

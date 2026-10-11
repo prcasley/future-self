@@ -26,12 +26,14 @@ The password is HTTP Basic, so the browser shows its own sign-in box once and th
 | Variable | Value |
 | --- | --- |
 | `NEBIUS_API_KEY` | the rotated Token Factory key |
-| `DEMO_PASSWORD` | a long random password for the judges |
+| `DEMO_PASSWORD` | a random password of at least 16 characters for the judges; the server refuses to start with a shorter one. After 20 wrong passwords in 10 minutes an IP gets 429 for the rest of the window |
 | `DEMO_USER` | optional; defaults to `judge` |
 | `MODEL_DAILY_CAP` | model calls per UTC day across everyone; the image defaults to 1500, and `0` turns the cap off |
 | `SESSION_DAILY_CAP` | model-backed turns per session per day; the image defaults to 150, and `0` turns the cap off |
 | `TTS_DAILY_CAP` | Renée voice requests per UTC day across everyone; the image defaults to 3000, and `0` turns the cap off. Over it, the browser's British voice is used |
 | `RATE_LIMIT_PER_MINUTE` | API requests per client IP per minute (the right-most `X-Forwarded-For` address); the image defaults to 120, and `0` turns it off. The page, static files and `/api/health` are not counted |
+| `TAVILY_API_KEY` | optional; turns on **Find sources** on mission cards |
+| `TAVILY_DAILY_CAP` | Tavily searches per UTC day across everyone; the image defaults to 200, and `0` turns the cap off. Over it, the card says sources are unavailable and nothing is cached |
 | `NEBIUS_PROJECT_ID` | only once the sandbox runner exists |
 | `RENEE_TTS_URL` / `RENEE_TTS_KEY` | leave unset: Renée runs inside the container (below). Set them only to use an external voice service instead |
 
@@ -89,4 +91,5 @@ Oct 11: with Renée bundled, the backend suite passes on Python 3.12, Renée's d
 
 - Accounts: every judge shares one password. Sessions are separated by random IDs kept in each browser, which is fine for a demo and not an authentication system.
 - Backups: the volume is the only copy.
+- Retention: after judging closes (December 15, 2026, 12:00 PM PT), delete the Railway volume so judges' goals, memories and check-ins don't outlive the contest. The README promises this.
 - Model budgets depend on credits. Keep the Nebius balance funded through December 15.
