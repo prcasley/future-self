@@ -101,6 +101,28 @@ BUDGET_MESSAGE = (
 )
 
 
+BUDGET_GREETING = (
+    "Hi, I'm ECHO. This demo has used today's AI budget, so free conversation is paused until "
+    "midnight UTC. Built-in commands still work: say “what is my mission”, “recap”, “show me my "
+    "dream life”, “scan my face” or “export my data”."
+)
+CREDIT_MESSAGE = (
+    "Nebius refused the request, which usually means the demo's AI credit or key needs attention. "
+    "Built-in commands still work, like “what is my mission”, “recap” and “export my data”."
+)
+
+
+def limited_session(session, state, reason):
+    """Start a session without the model: the local planner still runs and built-in commands work."""
+    store.save(session, state)
+    message = BUDGET_GREETING if reason == "budget" else CREDIT_MESSAGE
+    return JSONResponse(
+        status_code=429 if reason == "budget" else 503,
+        content={"detail": message, "greeting": message, "limited": reason, "state": public(state)},
+        headers={"Cache-Control": "no-store"},
+    )
+
+
 def over_budget():
     return bool(settings.model_daily_cap) and store.calls_today() >= settings.model_daily_cap
 
@@ -461,6 +483,8 @@ async def model_turn(state, text, tokens=None, messages=None, tools=TOOLS, max_t
                         return {"content": content, "tool_calls": list(calls.values())}
         except httpx.HTTPStatusError as error:
             # A 4xx (bad key, no credit, rate limited, bad request) won't change on a retry.
+            if error.response.status_code in (401, 402, 403):
+                raise RuntimeError("provider_rejected") from None
             if attempt or received or error.response.status_code < 500:
                 raise RuntimeError("provider_unavailable") from None
         except (httpx.HTTPError, TimeoutError):
@@ -705,13 +729,14 @@ async def connect_voice(body: SessionStart):
     if locks[session].locked():
         raise HTTPException(409, "A turn is already running. Please try again.")
     async with locks[session]:
-        if not allow_model(session):
-            raise HTTPException(429, BUDGET_MESSAGE)
         state = store.load(session)
         if body.timezone and daily.valid_timezone(body.timezone):
             state["timezone"] = body.timezone
         # Prepare the mission in memory; persist only after a successful provider response.
         opening = act(state, "open_day", {})
+        if not allow_model(session):
+            # Over budget: no model call, no "live" claim, but the session still opens.
+            return limited_session(session, state, "budget")
         try:
             result = await model_turn(
                 state,
@@ -723,7 +748,11 @@ async def connect_voice(body: SessionStart):
             greeting = (result.get("content") or "").strip()
             if not greeting:
                 raise ValueError("empty greeting")
-        except (httpx.HTTPError, TimeoutError, RuntimeError, ValueError):
+        except RuntimeError as error:
+            if str(error) == "provider_rejected":
+                return limited_session(session, state, "credit")
+            raise HTTPException(503, "Nebius could not complete the live session greeting. Try again.") from None
+        except (httpx.HTTPError, TimeoutError, ValueError):
             raise HTTPException(503, "Nebius could not complete the live session greeting. Try again.") from None
         store.save(session, state)
         return JSONResponse({
@@ -901,13 +930,13 @@ async def text_turn(turn: Turn):
                 yield event("sentence", {"text": answer})
             except asyncio.CancelledError:
                 raise
-            except Exception:
-                yield event(
-                    "error",
-                    {
-                        "text": "I could not finish that request. Please try again. Your saved goals are still here."
-                    },
-                )
+            except Exception as error:
+                reason = str(error) if isinstance(error, RuntimeError) else ""
+                text = {
+                    "daily_budget": BUDGET_MESSAGE,
+                    "provider_rejected": CREDIT_MESSAGE,
+                }.get(reason, "I could not finish that request. Please try again. Your saved goals are still here.")
+                yield event("error", {"text": text})
             yield event("done", {})
 
     return StreamingResponse(

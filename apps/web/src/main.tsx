@@ -87,10 +87,11 @@ function App() {
   // The future gallery (one face per side), how ECHO looks, and the camera mirror.
   const [gallery, setGallery] = useState<Gallery>({});
   const [ghostConfig, updateGhostConfig] = useGhostConfig();
-  const [runtime, setRuntime] = useState<{
-    model: string;
-    verified_at: string;
-  } | null>(null);
+  const [runtime, setRuntime] = useState<
+    | { model: string; verified_at: string }
+    | { limited: "budget" | "credit" }
+    | null
+  >(null);
   const runtimeRef = useRef(false);
   // Renée, ECHO's British voice. The label always names the engine actually speaking.
   const [voiceLabel, setVoiceLabel] = useState("Voice: Renée · British");
@@ -374,17 +375,24 @@ function App() {
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           }),
         });
-        if (!response.ok)
+        const connected = await response.json().catch(() => null);
+        if (id !== generation.current) return false;
+        if (response.ok && connected) {
+          runtimeRef.current = true;
+          setRuntime({
+            model: connected.model,
+            verified_at: connected.verified_at,
+          });
+        } else if (connected?.limited && connected.state) {
+          // Over today's AI budget, or Nebius refused the key or credit. The session still opens
+          // without the model and built-in commands keep working; nothing claims to be live, and
+          // the next turn checks again in case the budget has reset.
+          setRuntime({ limited: connected.limited });
+        } else {
           throw new Error(
             "Nebius connection failed. No live model session was established. Try Start session again.",
           );
-        const connected = await response.json();
-        if (id !== generation.current) return false;
-        runtimeRef.current = true;
-        setRuntime({
-          model: connected.model,
-          verified_at: connected.verified_at,
-        });
+        }
         setState(connected.state);
         if (text === "start my day") {
           speak(connected.greeting);
@@ -603,9 +611,13 @@ function App() {
     if (open) recognition.current?.abort();
     else listen();
   };
-  const runtimeLabel = runtime
-    ? `Live Nebius session · ${runtime.model} · verified ${new Date(runtime.verified_at).toLocaleTimeString()}`
-    : "Not connected to Nebius yet";
+  const runtimeLabel = !runtime
+    ? "Not connected to Nebius yet"
+    : "limited" in runtime
+      ? runtime.limited === "budget"
+        ? "Today's AI budget is used · built-in commands still work"
+        : "Nebius refused the request · built-in commands still work"
+      : `Live Nebius session · ${runtime.model} · verified ${new Date(runtime.verified_at).toLocaleTimeString()}`;
   if (ghost)
     return (
       <GhostMode

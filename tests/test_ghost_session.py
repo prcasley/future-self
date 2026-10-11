@@ -68,3 +68,46 @@ def test_connect_missing_key_budget_and_busy_are_explicit(setup, monkeypatch):
     monkeypatch.setattr(main.settings, "nebius_api_key", "test-only")
     monkeypatch.setattr(main, "allow_model", lambda session: False)
     assert client.post("/voice/connect", json={"session_id": session}).status_code == 429
+
+
+def test_over_budget_session_still_opens_without_the_model(setup, monkeypatch):
+    client, session = setup
+    saved = main.store.load(session)
+    saved["goals"] = {"learning": "Learn Python"}
+    main.store.save(session, saved)
+    calls = []
+
+    async def model(*args, **kwargs):
+        calls.append(1)
+        return {"content": "should not be called"}
+
+    monkeypatch.setattr(main, "model_turn", model)
+    monkeypatch.setattr(main, "allow_model", lambda session: False)
+    response = client.post("/voice/connect", json={"session_id": session})
+    assert response.status_code == 429
+    body = response.json()
+    assert calls == []
+    assert body["limited"] == "budget" and body["greeting"] == main.BUDGET_GREETING
+    assert "verified_at" not in body and "model" not in body
+    assert body["state"]["goals"] == {"learning": "Learn Python"}
+    # The local planner still prepared today's mission, and built-in commands answer.
+    assert main.store.load(session)["daily"]["mission"]["goal"] == "Learn Python"
+    turn = client.post("/voice/text_turn", json={"session_id": session, "text": "recap"})
+    assert "Learn Python" in turn.text
+
+
+def test_refused_key_or_credit_opens_a_limited_session_with_its_own_message(setup, monkeypatch):
+    client, session = setup
+
+    async def refused(*args, **kwargs):
+        raise RuntimeError("provider_rejected")
+
+    monkeypatch.setattr(main, "model_turn", refused)
+    response = client.post("/voice/connect", json={"session_id": session})
+    assert response.status_code == 503
+    body = response.json()
+    assert body["limited"] == "credit" and body["greeting"] == main.CREDIT_MESSAGE
+    assert "verified_at" not in body
+    turn = client.post("/voice/text_turn", json={"session_id": session, "text": "talk to me about anything"})
+    assert "Nebius refused the request" in turn.text  # its own message, not the generic error
+    assert "could not finish that request" not in turn.text
