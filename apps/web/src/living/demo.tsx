@@ -1,6 +1,7 @@
 // Living portrait preview page (/living.html): bring any front-facing picture to life, try the
 // camera mirror and the talking mouth, and inspect single poses. Everything stays on this device.
 
+import { GhostMode } from "../ghost/GhostMode";
 import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { Pose } from "./geometry";
@@ -49,6 +50,7 @@ type Manual = {
 const NEUTRAL: Manual = { yaw: 0, pitch: 0, roll: 0, blink: 0, open: 0 };
 
 function App() {
+  const [ghost, setGhost] = useState(false);
   const [url, setUrl] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [mode, setMode] = useState<Mode>("idle");
@@ -101,12 +103,25 @@ function App() {
     </label>
   );
 
+  if (ghost)
+    return (
+      <GhostMode
+        imageUrl={url}
+        mode={mode}
+        follow={mirror}
+        manual={pose}
+        onExit={() => setGhost(false)}
+      />
+    );
   return (
     <div className="lp">
       <header className="lp-head">
         <div className="lp-brand">
           THE OTHER <span>SIDE</span>
         </div>
+        <button type="button" onClick={() => setGhost(true)}>
+          Ghost mode
+        </button>
         <div className="lp-sub">Living portrait · preview</div>
       </header>
       <main className="lp-main">

@@ -38,7 +38,16 @@ export interface LivingPortraitProps {
   onMirror?: (state: MirrorState) => void;
   onFps?: (fps: number) => void;
   className?: string;
+  /** Ghost requires a person mask; never project a rectangular fallback photo. */
+  ghost?: boolean;
+  /** Synchronous copy after render, before WebGL clears its drawing buffer. */
+  onFrame?: (canvas: HTMLCanvasElement) => void;
 }
+
+// A short-lived handoff lets Ghost resume the face and camera choice currently on stage.
+// Cleared when that stage unmounts; no pixels or camera frames leave the renderer.
+let presentation: { imageUrl: string; follow: boolean } | null = null;
+export const currentLivingPresentation = () => presentation;
 
 const EYE_LIGHT: Record<string, [number, number, number]> = {
   home: [0.8, 0.9, 1.0],
@@ -52,9 +61,17 @@ const MAX_SIDE = 1600;
 type Source = { canvas: HTMLCanvasElement; landmarks: Landmark[] };
 
 /** Decode, find the face, and frame loose photos to head and shoulders. */
-async function prepare(url: string, cutout: boolean): Promise<Source | null> {
+async function prepare(
+  url: string,
+  cutout: boolean,
+  ghost = false,
+): Promise<Source | null> {
   const { image, landmarks, mask } = await analyzePhoto(url);
   if (!landmarks) return null;
+  if (ghost && !mask)
+    throw new Error(
+      "Person cut-out unavailable. Try another photo or reload the face models.",
+    );
   const W = image.naturalWidth;
   const H = image.naturalHeight;
   const face = faceFromLandmarks(landmarks, W, H);
@@ -230,17 +247,28 @@ export function LivingPortrait({
   onMirror,
   onFps,
   className,
+  ghost = false,
+  onFrame,
 }: LivingPortraitProps) {
   const host = useRef<HTMLDivElement>(null);
   const modeRef = useRef<Mode>(mode);
   const manualRef = useRef<Partial<Pose> | null>(manual);
   const accentRef = useRef<string | null>(accent);
   const mirrorRef = useRef<WebcamMirror | null>(null);
-  const callbacks = useRef({ onState, onMirror, onFps });
+  const callbacks = useRef({ onState, onMirror, onFps, onFrame });
   modeRef.current = mode;
   manualRef.current = manual;
   accentRef.current = accent;
-  callbacks.current = { onState, onMirror, onFps };
+  callbacks.current = { onState, onMirror, onFps, onFrame };
+
+  useEffect(() => {
+    if (ghost || !imageUrl) return;
+    const value = { imageUrl, follow: mirror };
+    presentation = value;
+    return () => {
+      if (presentation === value) presentation = null;
+    };
+  }, [imageUrl, mirror, ghost]);
 
   // The camera mirror lives apart from the scene, so toggling it never rebuilds the portrait.
   useEffect(() => {
@@ -286,7 +314,7 @@ export function LivingPortrait({
       renderer.domElement.remove();
     });
 
-    prepare(imageUrl, cutout)
+    prepare(imageUrl, cutout, ghost)
       .then((source) => {
         if (disposed) return;
         if (!source) {
@@ -447,6 +475,7 @@ export function LivingPortrait({
             if (light) material.uniforms.uColor.value.setRGB(...light);
           });
           renderer.render(scene, camera);
+          callbacks.current.onFrame?.(renderer.domElement);
           drawn = true;
           frames++;
           if (now - lastFps >= 1000) {
@@ -483,7 +512,7 @@ export function LivingPortrait({
       cancelAnimationFrame(raf);
       cleanups.reverse().forEach((fn) => fn());
     };
-  }, [imageUrl, cutout]);
+  }, [imageUrl, cutout, ghost]);
 
   return <div ref={host} className={"living-portrait " + (className || "")} />;
 }

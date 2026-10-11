@@ -62,6 +62,7 @@ export default defineConfig({
       // The app, plus the living-portrait preview page.
       input: {
         main: resolve(here, "index.html"),
+        ghost: resolve(here, "ghost/index.html"),
         living: resolve(here, "living.html"),
       },
     },

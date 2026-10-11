@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { GhostMode, useGhostRoute } from "./ghost/GhostMode";
 import { createRoot } from "react-dom/client";
 import { Hologram } from "./Hologram";
 import { TypeInstead } from "./TypeInstead";
@@ -50,6 +51,7 @@ const VOICES: Record<string, { rate: number; pitch: number }> = {
 const session = localStorage.getItem("echo-session") || crypto.randomUUID();
 localStorage.setItem("echo-session", session);
 function App() {
+  const [ghost, setGhost] = useGhostRoute();
   const [state, setState] = useState(empty);
   const [running, setRunning] = useState(false);
   const typing = useRef(false);
@@ -469,6 +471,20 @@ function App() {
       : busy.current
         ? "thinking"
         : "listening";
+  if (ghost)
+    return (
+      <GhostMode
+        key={portraitEpoch}
+        resumeLiving
+        imageUrl={portrait}
+        mode={presenceMode}
+        running={running}
+        onSession={start}
+        onInterrupt={interrupt}
+        status={status}
+        onExit={() => setGhost(false)}
+      />
+    );
   return (
     <main>
       <header>
@@ -543,6 +559,7 @@ function App() {
       />
       <div className="stage">
         <section className="presence">
+          <button type="button" onClick={() => setGhost(true)}>Ghost mode</button>
           <div className="stage-label">
             <span className={running ? "light live" : "light"} />
             {state.side

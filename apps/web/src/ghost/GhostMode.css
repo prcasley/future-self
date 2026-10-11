@@ -1,0 +1,128 @@
+.ghost-mode {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+  isolation: isolate;
+  font-family: system-ui, sans-serif;
+}
+.ghost-mode.is-running {
+  cursor: none;
+}
+.ghost-source {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: min(80vw, 70vh);
+  height: min(100vw, 87.5vh);
+  opacity: 0;
+  pointer-events: none;
+}
+.ghost-source .living-portrait {
+  min-height: 0;
+}
+.ghost-field {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.ghost-field.pyramid {
+  width: 100vmin;
+  height: 100vmin;
+  inset: auto;
+  left: 50%;
+  top: 50%;
+  margin-left: -50vmin;
+  margin-top: -50vmin;
+}
+.ghost-copy {
+  position: absolute;
+  transform-origin: center;
+}
+.ghost-feather {
+  width: 100%;
+  height: 100%;
+  mask-image: radial-gradient(
+    ellipse 50% 50% at 50% 45%,
+    #000 62%,
+    transparent 100%
+  );
+}
+.ghost-copy canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: brightness(1.28) contrast(1.16) drop-shadow(0 0 5px #a9d8ed88)
+    drop-shadow(0 0 12px #a9d8ed33);
+}
+.ghost-controls {
+  position: absolute;
+  z-index: 2;
+  left: 16px;
+  bottom: 16px;
+  width: min(440px, calc(100% - 32px));
+  max-height: calc(100% - 32px);
+  overflow: auto;
+  padding: 18px;
+  border: 1px solid #555;
+  border-radius: 12px;
+  background: #101014f5;
+  box-sizing: border-box;
+  text-align: left;
+}
+.ghost-controls h1 {
+  font-size: 20px;
+  margin: 0 0 8px;
+  color: white;
+}
+.ghost-controls p {
+  font-size: 13px;
+  color: #ccc;
+  margin: 8px 0;
+}
+.ghost-controls label {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 12px 0;
+  font-size: 14px;
+}
+.ghost-controls input[type="range"] {
+  flex: 1;
+  min-width: 70px;
+}
+.ghost-controls input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+.ghost-controls input[type="file"] {
+  max-width: 100%;
+  color: white;
+}
+.ghost-controls button,
+.ghost-controls select {
+  background: #22242b;
+  color: white;
+  padding: 9px 12px;
+  border: 1px solid #656875;
+  border-radius: 6px;
+  font: inherit;
+  cursor: pointer;
+}
+.ghost-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.ghost-controls button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.ghost-controls :focus-visible {
+  outline: 2px solid #a9d8ed;
+  outline-offset: 3px;
+}
