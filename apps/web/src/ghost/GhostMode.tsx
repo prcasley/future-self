@@ -6,6 +6,7 @@ import { useGhostConfig } from "./useGhostConfig";
 import type { Pose } from "../living/geometry";
 import type { Mode } from "../living/motion";
 import type { GhostLayout } from "./layout";
+import { demoFaceFile } from "../demoFace";
 import "./GhostMode.css";
 
 const atGhost = () => /^\/ghost(?:\/|$)/.test(window.location.pathname);
@@ -72,6 +73,19 @@ export function GhostMode({
   const root = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLElement>(null);
   const [photo, setPhoto] = useState<string | null>(null);
+  const [loadingDemo, setLoadingDemo] = useState(false);
+  const takePhotoFile = (file: File) => {
+    if (onPhoto) onPhoto(file);
+    else setPhoto(URL.createObjectURL(file));
+  };
+  const applyDemoFace = async () => {
+    setLoadingDemo(true);
+    try {
+      takePhotoFile(await demoFaceFile());
+    } finally {
+      setLoadingDemo(false);
+    }
+  };
   const url = photo || imageUrl;
   const [controls, setControls] = useState(true);
   const [camera, setCamera] = useState("off");
@@ -216,11 +230,20 @@ export function GhostMode({
           </p>
           <p role="status">
             {!url
-              ? "Choose a portrait to begin."
+              ? "Use the demo face, or choose a portrait to begin."
               : state === "ready"
                 ? "Portrait ready"
                 : detail || "Preparing the living portrait…"}
           </p>
+          {!url && (
+            <button
+              type="button"
+              disabled={loadingDemo}
+              onClick={() => void applyDemoFace()}
+            >
+              Use the demo face
+            </button>
+          )}
           <label>
             Photo{" "}
             <input
@@ -229,10 +252,7 @@ export function GhostMode({
               accept="image/png,image/jpeg,image/webp"
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) {
-                  if (onPhoto) onPhoto(file);
-                  else setPhoto(URL.createObjectURL(file));
-                }
+                if (file) takePhotoFile(file);
                 e.target.value = "";
               }}
             />

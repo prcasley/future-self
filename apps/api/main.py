@@ -99,6 +99,10 @@ session_turns = defaultdict(lambda: ["", 0])  # session -> [UTC date, model-back
 tts_today = ["", 0]  # [UTC date, Renée voice requests]
 tts_lock = Lock()
 sources_today = ["", 0]  # [UTC date, Tavily searches]
+# After Nebius fails with a 5xx or a timeout, free conversation pauses briefly instead of making
+# every turn wait out the same outage.
+OUTAGE_PAUSE_SECONDS = 60
+provider_down = [0.0]
 sources_lock = Lock()
 BUDGET_MESSAGE = (
     "This demo has used today's AI budget, so I can't talk freely until tomorrow. Built-in commands "
@@ -523,9 +527,12 @@ async def model_turn(state, text, tokens=None, messages=None, tools=TOOLS, max_t
             if error.response.status_code in (401, 402, 403):
                 raise RuntimeError("provider_rejected") from None
             if attempt or received or error.response.status_code < 500:
+                if error.response.status_code >= 500:
+                    provider_down[0] = time.monotonic() + OUTAGE_PAUSE_SECONDS
                 raise RuntimeError("provider_unavailable") from None
         except (httpx.HTTPError, TimeoutError):
             if attempt or received:
+                provider_down[0] = time.monotonic() + OUTAGE_PAUSE_SECONDS
                 raise RuntimeError("provider_unavailable") from None
         finally:
             store.log(
@@ -932,6 +939,9 @@ async def text_turn(turn: Turn):
                     # A look change is a new topic: it expires any pending confirmation.
                     state["pending"] = None
                     action, args = "set_appearance", look
+                elif time.monotonic() < provider_down[0]:
+                    state["pending"] = None
+                    answer = OFFLINE_MESSAGE
                 elif not allow_model(session):
                     state["pending"] = None
                     answer = BUDGET_MESSAGE
@@ -1016,6 +1026,7 @@ async def text_turn(turn: Turn):
                     "daily_budget": BUDGET_MESSAGE,
                     "provider_rejected": CREDIT_MESSAGE,
                     "missing_key": OFFLINE_MESSAGE,
+                    "provider_unavailable": OFFLINE_MESSAGE,
                 }.get(reason, "I could not finish that request. Please try again. Your saved goals are still here.")
                 yield event("error", {"text": text})
             yield event("done", {})

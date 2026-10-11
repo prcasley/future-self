@@ -4,11 +4,8 @@ import type { GhostConfig } from "./ghost/config";
 import type { Mode } from "./living/motion";
 import type { LivingState } from "./living/LivingPortrait";
 import type { MirrorState } from "./living/tracker";
+import { demoFaceFile } from "./demoFace";
 import "./EchoStage.css";
-
-// An AI-generated portrait of the project's author, published with his consent (docs/ghost/README.md),
-// so judges see ECHO's face before choosing their own.
-const DEMO_FACE = new URL("./assets/demo-face.jpg", import.meta.url).href;
 
 /** The main stage uses exactly the display renderer used by /ghost. */
 export function EchoStage({
@@ -35,8 +32,7 @@ export function EchoStage({
   const applyDemoFace = async () => {
     setLoadingDemo(true);
     try {
-      const blob = await (await fetch(DEMO_FACE)).blob();
-      onPhoto(new File([blob], "demo-face.jpg", { type: "image/jpeg" }));
+      onPhoto(await demoFaceFile());
     } finally {
       setLoadingDemo(false);
     }
@@ -62,6 +58,11 @@ export function EchoStage({
         />
       </div>
       <div className="echo-tools">
+        {!imageUrl && (
+          <button type="button" disabled={loadingDemo} onClick={() => void applyDemoFace()}>
+            Use the demo face
+          </button>
+        )}
         <button type="button" onClick={onProject}>
           Ghost mode
         </button>
@@ -81,11 +82,6 @@ export function EchoStage({
             onChange={choose}
           />
         </label>
-        {!imageUrl && (
-          <button type="button" disabled={loadingDemo} onClick={() => void applyDemoFace()}>
-            Use the demo face
-          </button>
-        )}
         <span role="status">
           {!imageUrl
             ? "Use the demo face, or choose your own portrait. Your photo stays on this device."

@@ -67,3 +67,26 @@ def test_provider_outage_still_opens_a_limited_session(tmp_path, monkeypatch):
     monkeypatch.setattr(main, "model_turn", outage)
     body = TestClient(main.app).post("/voice/connect", json={"session_id": str(uuid4())}).json()
     assert body.get("limited") and body.get("state") is not None
+
+
+def test_an_outage_answers_offline_and_skips_the_model_for_a_while(tmp_path, monkeypatch):
+    monkeypatch.setattr(main, "store", Store(str(tmp_path / "outage.db")))
+    monkeypatch.setattr(main.settings, "nebius_api_key", "test-only")
+    calls = []
+
+    async def down(*args, **kwargs):
+        calls.append(1)
+        main.provider_down[0] = main.time.monotonic() + main.OUTAGE_PAUSE_SECONDS
+        raise RuntimeError("provider_unavailable")
+
+    monkeypatch.setattr(main, "model_turn", down)
+    client = TestClient(main.app)
+    session = str(uuid4())
+
+    def say(text):
+        return client.post("/voice/text_turn", json={"session_id": session, "text": text}).text
+
+    offline = main.json.dumps(main.OFFLINE_MESSAGE)[1:-1]  # as it appears in the SSE frame
+    assert offline in say("I want to build my first app")
+    assert offline in say("Tell me about my future")
+    assert len(calls) == 1
