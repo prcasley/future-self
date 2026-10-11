@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { EchoStage } from "./EchoStage";
 import { useGhostConfig } from "./ghost/useGhostConfig";
 import { TypeInstead } from "./TypeInstead";
+import { MissionSources } from "./MissionSources";
 import { FuturePortrait } from "./FuturePortrait";
 import { LabPanel, OtherSidePanel, SIDE_LABELS } from "./Panels";
 import { downloadExport, turn, type EchoState } from "./api";
@@ -85,6 +86,9 @@ function App() {
   const [did, setDid] = useState("");
   const [ledger, setLedger] = useState<any[]>([]);
   const [configured, setConfigured] = useState(false);
+  const [tavilyConfigured, setTavilyConfigured] = useState<boolean | null>(
+    null,
+  );
   const [talking, setTalking] = useState(false);
   const [portrait, setPortrait] = useState<string | null>(null);
   const [portraitEpoch, setPortraitEpoch] = useState(0);
@@ -167,7 +171,10 @@ function App() {
       .catch(() => setStatus("Start the local API to connect ECHO."));
     fetch("/api/health")
       .then((r) => r.json())
-      .then((x) => setConfigured(x.configured))
+      .then((x) => {
+        setConfigured(x.configured);
+        setTavilyConfigured(x.sources?.configured ?? null);
+      })
       .catch(() => {});
     return () => {
       enabled.current = false;
@@ -863,6 +870,31 @@ function App() {
               </ol>
               <p>{state.daily.mission.basis}</p>
               <small>{state.daily.mission.disclaimer}</small>
+              <MissionSources
+                key={JSON.stringify(state.daily.mission.key)}
+                session={session}
+                mission={state.daily.mission}
+                available={tavilyConfigured}
+                onResult={(research, revision) => {
+                  const key = JSON.stringify(state.daily.mission?.key);
+                  setState((previous) => {
+                    if (
+                      !previous.daily.mission ||
+                      previous.revision > revision ||
+                      JSON.stringify(previous.daily.mission.key) !== key
+                    )
+                      return previous;
+                    return {
+                      ...previous,
+                      revision,
+                      daily: {
+                        ...previous.daily,
+                        mission: { ...previous.daily.mission, research },
+                      },
+                    };
+                  });
+                }}
+              />
             </div>
           )}
           {state.daily?.schedule?.enabled && (

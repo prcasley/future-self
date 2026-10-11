@@ -1,3 +1,5 @@
+import type { MissionResearch } from "./missionSourceData";
+
 export type Future = {
   label: string;
   final: Record<string, number>;
@@ -59,6 +61,8 @@ export type Experiment = {
 export type EchoState = {
   daily: {
     mission: null | {
+      key: (string | number | null)[];
+      research?: MissionResearch;
       goal: string;
       minutes: number;
       done: boolean;

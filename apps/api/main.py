@@ -17,7 +17,7 @@ from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from . import avatar, daily, otherside, portrait, scan
+from . import avatar, daily, mission_sources, otherside, portrait, scan
 from . import lab as labmod
 from .store import PANELS, Store, act, export_payload, public
 
@@ -85,12 +85,14 @@ class Settings(BaseSettings):
     renee_tts_url: str = ""
     renee_tts_key: str = ""
     renee_tts_voice: str = "bf_emma"
+    tavily_api_key: str = ""
 
 
 settings = Settings()
 store = Store(settings.database)
 app = FastAPI(title="The Other Side", version="0.5.0")
 locks = defaultdict(asyncio.Lock)
+source_locks = defaultdict(asyncio.Lock)
 portrait_budget_lock = Lock()
 session_turns = defaultdict(lambda: ["", 0])  # session -> [UTC date, model-backed turns]
 tts_today = ["", 0]  # [UTC date, Renée voice requests]
@@ -571,6 +573,7 @@ def health():
         "audio": "browser_asr",
         "model": settings.nebius_super_model,
         "sandboxes": bool(settings.nebius_project_id),
+        "sources": {"provider": "tavily", "configured": bool(settings.tavily_api_key.strip())},
         "voice": {
             "name": "Renée",
             "accent": "British English",
@@ -604,6 +607,42 @@ async def daily_poll(session_id: UUID):
             state["revision"] += 1
             store.save(session, state)
         return public(state)
+
+
+class MissionSourceRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    mission_key: list[str | int | None] = Field(min_length=5, max_length=5)
+
+
+@app.post("/daily/{session_id}/sources")
+async def daily_sources(session_id: UUID, body: MissionSourceRequest):
+    """Search only after an explicit click; never send memories, photos or conversation."""
+    session = str(session_id)
+    if source_locks[session].locked():
+        raise HTTPException(409, "A source search is already running. Please wait.")
+    async with source_locks[session]:
+        async with locks[session]:
+            state = store.load(session)
+            mission = state["daily"].get("mission")
+            if not mission or mission["key"] != body.mission_key:
+                raise HTTPException(409, "Your mission changed. Search from the current mission card.")
+            cached = mission.get("research")
+            if cached and cached["status"] in ("ready", "empty"):
+                return JSONResponse({"research": cached, "revision": state["revision"]},
+                                    headers={"Cache-Control": "no-store"})
+            goal = mission["goal"]
+        research = await mission_sources.search(goal, settings.tavily_api_key)
+        # Voice, completion and deletion can continue while Tavily is responding.
+        async with locks[session]:
+            state = store.load(session)
+            mission = state["daily"].get("mission")
+            if not mission or mission["key"] != body.mission_key:
+                raise HTTPException(409, "Your mission changed. The old search was discarded.")
+            mission["research"] = research
+            state["revision"] += 1
+            store.save(session, state)
+            return JSONResponse({"research": research, "revision": state["revision"]},
+                                headers={"Cache-Control": "no-store"})
 
 
 @app.get("/otherside/{session_id}")

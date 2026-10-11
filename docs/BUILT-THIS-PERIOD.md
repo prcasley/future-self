@@ -49,3 +49,33 @@ clearly called out; no key should be pasted into chat or committed.
 - Validation: 57 web tests, 123 backend tests and production build passed. New tests
   cover real-sample energy math, silence, stereo phase, smoothing, head/blink preservation,
   rejected playback and interruption followed immediately by another sentence.
+
+## 2026-10-11 — Optional Tavily links on mission cards
+
+- Added `TAVILY_API_KEY` configuration and an explicit **Find sources** action.
+  Only the displayed mission goal (at most 400 characters) goes to Tavily; the card
+  explains this before searching. Nothing is sent automatically and memories,
+  conversations, photos and camera frames are never part of this request.
+- Use the real Tavily Search HTTP endpoint when configured. Show at most three
+  deduplicated web links as related reading, not invented citations or a claim that
+  Tavily generated the local mission. Successful/empty searches are cached with the
+  mission; source metadata participates in the existing data export and deletion.
+- Missing key, timeouts, upstream failures, malformed responses and empty results
+  have explicit fallback messages. Missions and voice continue. Search does not hold
+  the conversation lock while waiting; late results cannot overwrite a changed or
+  deleted mission or undo its completion.
+- Validation: 137 backend tests, 59 web tests, production build and lint passed.
+  Contract tests use an explicitly fake HTTP transport and are not live-search proof.
+  Real Chrome and API checks confirmed `not_configured`, no links, and a working
+  mission. Screenshot: `docs/voice/mission-sources-fallback.png`.
+- Still deferred for Claude: add the real Tavily key as a deployment secret, restart
+  the API, refresh the page and run **Find sources**. No live Tavily request has been
+  made; do not claim Tavily bonus eligibility until that runtime check succeeds.
+
+## Local review state
+
+Voice service: localhost:8000 (CPU). Verification API: localhost:8018 with isolated
+`work/renee/live.db`. Verification web app: http://127.0.0.1:5189/ghost.
+These are local development processes, not an installed auto-start service.
+For the normal app, follow `services/renee-tts/README.md` and restart its API so it
+reads the configured ignored `.env`. No changes were pushed.

@@ -530,3 +530,26 @@ footer {
 .portrait-result dd {
   margin: 2px 0 10px;
 }
+
+.mission-sources {
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid #ffffff26;
+}
+.mission-sources h3 {
+  font-size: 14px;
+  margin: 0;
+}
+.mission-sources p,
+.mission-sources li {
+  font-size: 13px;
+  line-height: 1.5;
+}
+.mission-sources a {
+  color: #a8dfdf;
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+}
+.mission-sources .source-consent {
+  opacity: 0.75;
+}
