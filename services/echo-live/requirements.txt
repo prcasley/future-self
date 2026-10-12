@@ -1,0 +1,5 @@
+# ECHO Live: PersonaPlex (NVIDIA's moshi fork) pinned to the commit these scripts were written against.
+# Install CUDA PyTorch 2.4 first (see README.md), then: pip install -r services/echo-live/requirements.txt
+moshi-personaplex @ git+https://github.com/NVIDIA/personaplex.git@3428dfd95309a7f3c84fd93259ded0f810d1ff91#subdirectory=moshi
+safetensors>=0.4,<0.5
+huggingface-hub>=0.24,<0.25
