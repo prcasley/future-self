@@ -83,3 +83,14 @@ test("one serializable config covers all display calibration without image data"
   assert.equal(normalized.feather, 85);
   assert.equal("imageUrl" in normalized, false);
 });
+
+test("the live glow follows real state: Reneė's loudness, a thinking breath, steady listening", async () => {
+  const { liveGlow } = await import("../src/ghost/layout.ts");
+  assert.equal(liveGlow("idle", 1, 0), 0);
+  assert.equal(liveGlow("listening", 1, 5), 0.12);
+  assert.ok(liveGlow("speaking", 1, 0) > liveGlow("speaking", 0.2, 0));
+  assert.equal(liveGlow("speaking", 7, 0), liveGlow("speaking", 1, 0)); // loudness is clamped
+  const breath = [0, 0.6, 1.2, 1.8].map((t) => liveGlow("thinking", 0, t));
+  assert.ok(Math.max(...breath) - Math.min(...breath) > 0.1);
+  assert.equal(liveGlow("thinking", 0, 0), liveGlow("thinking", 0, 0)); // reduced motion: steady
+});

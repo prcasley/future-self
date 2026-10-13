@@ -41,6 +41,8 @@ type Props = {
   onSession?: () => void;
   onInterrupt?: () => void;
   status?: string;
+  /** The scenario's light in the eyes (home, dream, good, neutral, bad). */
+  accent?: string | null;
   onExit: () => void;
 };
 
@@ -59,6 +61,7 @@ export function GhostMode({
   onSession,
   onInterrupt,
   status,
+  accent,
   onExit,
 }: Props) {
   const [localConfig, setLocalConfig] = useGhostConfig(!providedConfig);
@@ -183,6 +186,20 @@ export function GhostMode({
       );
     }
   };
+  /**
+   * One tap for a demo: start the session first, inside the tap (speech recognition needs the
+   * gesture, and onSession is a toggle, so it runs at most once), then project, fullscreen where
+   * the browser allows it.
+   */
+  const demo = () => {
+    if (!running) onSession?.();
+    setScreen("");
+    setControls(false);
+    if (!document.fullscreenElement)
+      root.current?.requestFullscreen?.().catch(() => {
+        /* phones without element fullscreen still project in the page */
+      });
+  };
   const exit = async () => {
     if (document.fullscreenElement === root.current) {
       try {
@@ -209,6 +226,7 @@ export function GhostMode({
         mode={mode}
         config={config}
         manual={manual}
+        accent={accent}
         onMirror={setCamera}
         onState={(next, message) => {
           setState(next);
@@ -246,36 +264,29 @@ export function GhostMode({
                 ? "Portrait ready"
                 : detail || "Preparing the living portrait…"}
           </p>
-          {!url && (
-            <button
-              type="button"
-              disabled={loadingDemo}
-              onClick={() => void applyDemoFace()}
-            >
-              Use the demo face
-            </button>
-          )}
-          <label>
-            Photo{" "}
-            <input
-              aria-label="Ghost photo"
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) takePhotoFile(file);
-                e.target.value = "";
-              }}
-            />
-          </label>
-          <label>
-            <input
-              type="checkbox"
-              checked={mirrored}
-              onChange={(e) => update({ mirrored: e.target.checked })}
-            />
-            Mirror reflection
-          </label>
+          <div className="ghost-photo">
+            {!url && (
+              <button
+                type="button"
+                disabled={loadingDemo}
+                onClick={() => void applyDemoFace()}
+              >
+                Use the demo face
+              </button>
+            )}
+            <label className="ghost-file">
+              {url ? "Change photo" : "Choose photo"}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) takePhotoFile(file);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+          </div>
           <label>
             Layout{" "}
             <select
@@ -289,101 +300,127 @@ export function GhostMode({
               <option value="pyramid">Four-sided pyramid</option>
             </select>
           </label>
-          <label>
-            Size{" "}
-            <input
-              aria-label="Portrait size"
-              type="range"
-              min="40"
-              max="140"
-              value={size}
-              onChange={(e) => update({ size: Number(e.target.value) })}
-            />
-            <output>{size}%</output>
-          </label>
-          <label>
-            Vertical{" "}
-            <input
-              aria-label="Vertical position"
-              type="range"
-              min="-30"
-              max="30"
-              value={vertical}
-              onChange={(e) => update({ vertical: Number(e.target.value) })}
-            />
-            <output>{vertical}%</output>
-          </label>
-          <label>
-            <input
-              type="checkbox"
-              checked={tracking}
-              onChange={(e) => update({ follow: e.target.checked })}
-            />
-            Follow my head
-          </label>
-          <p>Camera: {camera}. Photo and camera frames stay in this browser.</p>
-          <p>
-            {awake}
-            {screen && ` · ${screen}`}
-          </p>
-          <label>
-            Brightness{" "}
-            <input
-              aria-label="Ghost brightness"
-              type="range"
-              min="0.8"
-              max="1.8"
-              step="0.02"
-              value={config.brightness}
-              onChange={(e) => update({ brightness: Number(e.target.value) })}
-            />
-          </label>
-          <label>
-            Contrast{" "}
-            <input
-              aria-label="Ghost contrast"
-              type="range"
-              min="0.8"
-              max="1.6"
-              step="0.02"
-              value={config.contrast}
-              onChange={(e) => update({ contrast: Number(e.target.value) })}
-            />
-          </label>
-          <label>
-            Rim light{" "}
-            <input
-              aria-label="Rim light"
-              type="range"
-              min="0"
-              max="1"
-              step="0.05"
-              value={config.rim}
-              onChange={(e) => update({ rim: Number(e.target.value) })}
-            />
-          </label>
-          <label>
-            Edge fade{" "}
-            <input
-              aria-label="Edge fade"
-              type="range"
-              min="20"
-              max="85"
-              value={config.feather}
-              onChange={(e) => update({ feather: Number(e.target.value) })}
-            />
-          </label>
-          <label>
-            <input
-              type="checkbox"
-              checked={config.keepAwake}
-              onChange={(e) => update({ keepAwake: e.target.checked })}
-            />
-            Keep screen awake
-          </label>
-          {status && <p role="status">{status}</p>}
+          <details className="ghost-calibrate">
+            <summary>Calibrate</summary>
+            <label>
+              <input
+                type="checkbox"
+                checked={mirrored}
+                onChange={(e) => update({ mirrored: e.target.checked })}
+              />
+              Mirror reflection
+            </label>
+            <label>
+              Size{" "}
+              <input
+                aria-label="Portrait size"
+                type="range"
+                min="40"
+                max="140"
+                value={size}
+                onChange={(e) => update({ size: Number(e.target.value) })}
+              />
+              <output>{size}%</output>
+            </label>
+            <label>
+              Vertical{" "}
+              <input
+                aria-label="Vertical position"
+                type="range"
+                min="-30"
+                max="30"
+                value={vertical}
+                onChange={(e) => update({ vertical: Number(e.target.value) })}
+              />
+              <output>{vertical}%</output>
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={tracking}
+                onChange={(e) => update({ follow: e.target.checked })}
+              />
+              Follow my head
+            </label>
+            <label>
+              Brightness{" "}
+              <input
+                aria-label="Ghost brightness"
+                type="range"
+                min="0.8"
+                max="1.8"
+                step="0.02"
+                value={config.brightness}
+                onChange={(e) => update({ brightness: Number(e.target.value) })}
+              />
+            </label>
+            <label>
+              Contrast{" "}
+              <input
+                aria-label="Ghost contrast"
+                type="range"
+                min="0.8"
+                max="1.6"
+                step="0.02"
+                value={config.contrast}
+                onChange={(e) => update({ contrast: Number(e.target.value) })}
+              />
+            </label>
+            <label>
+              Rim light{" "}
+              <input
+                aria-label="Rim light"
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={config.rim}
+                onChange={(e) => update({ rim: Number(e.target.value) })}
+              />
+            </label>
+            <label>
+              Edge fade{" "}
+              <input
+                aria-label="Edge fade"
+                type="range"
+                min="20"
+                max="85"
+                value={config.feather}
+                onChange={(e) => update({ feather: Number(e.target.value) })}
+              />
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={config.keepAwake}
+                onChange={(e) => update({ keepAwake: e.target.checked })}
+              />
+              Keep screen awake
+            </label>
+            <p>Camera: {camera}. Photo and camera frames stay in this browser.</p>
+            <p>{awake}</p>
+          </details>
           {children}
+          {screen && <p role="status">{screen}</p>}
+          {status && <p role="status">{status}</p>}
           <div className="ghost-actions">
+            <button
+              className="ghost-primary"
+              disabled={!url || state !== "ready"}
+              onClick={demo}
+            >
+              {running ? "Demo" : "Demo · start talking"}
+            </button>
+            {onSession && (
+              <button onClick={onSession}>
+                {running ? "Stop listening" : "Start session"}
+              </button>
+            )}
+            {running && onInterrupt && (
+              <button onClick={onInterrupt}>Interrupt ECHO</button>
+            )}
+          </div>
+          <div className="ghost-actions ghost-secondary">
             <button
               disabled={!url || state !== "ready"}
               onClick={() => setControls(false)}
@@ -396,14 +433,6 @@ export function GhostMode({
             >
               Fullscreen
             </button>
-            {onSession && (
-              <button onClick={onSession}>
-                {running ? "Stop listening" : "Start session"}
-              </button>
-            )}
-            {running && onInterrupt && (
-              <button onClick={onInterrupt}>Interrupt ECHO</button>
-            )}
             <button onClick={() => void exit()}>Exit Ghost</button>
           </div>
         </section>

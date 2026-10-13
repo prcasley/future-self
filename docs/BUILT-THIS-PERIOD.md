@@ -123,3 +123,16 @@ Fixes from ChatGPT's source review of the conversation loop on the PC:
 - Built current bundled CPU image in 8.056 s with cached layers; 837,721,309 bytes. Seven HTTP gate checks passed; real 4.875 s speech synthesized in 2.215 s on two CPU threads.
 - Refreshed safe evidence/audio, corrected stale deployment verification claims and consolidated remaining work in docs/REMAINING-WORK.md. No voice-loop rewrite.
 - Physical acceptance remains 0/30 turns at Prat's request; no paid calls, sign-in, deployment, push or deletion. Account setup, hosted verification and the real demo still require Prat/Claude.
+
+## 2026-10-13 — Ghost mode looks alive and demos in one tap
+
+From the Agent Factory's design review of Ghost mode against Prat's vision (scored 6/10):
+- The chest now dissolves into black (a vertical fade combined with the head's radial fade), so the reflection
+  has no hard bottom edge and the head floats.
+- The pale-blue rim shows what ECHO is doing, from real state only: it swells with the loudness of Reneė's
+  actual audio, breathes slowly while thinking and holds steady while listening (steady under reduced motion).
+  The scenario's eye light, which Ghost had switched off, now shows.
+- **Demo · start talking** starts the session inside the tap, projects, and goes fullscreen where the browser
+  allows it. The panel is restyled in Prat's Shadow Monarch theme; calibration sits under a collapsed Calibrate.
+- Reviewed by the factory's code reviewer (double-tap toggle and accent default fixed). 67 web tests and the
+  build pass; headless screenshots confirm the flow. Real glass, a phone pyramid and audible Reneė still need Prat.

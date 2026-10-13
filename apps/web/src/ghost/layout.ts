@@ -17,3 +17,15 @@ export function ghostSlots(layout: GhostLayout) {
 export function ghostTransform(rotation: number, mirrored = true) {
   return `translate(-50%, -50%) rotate(${rotation}deg) scaleX(${mirrorScale(mirrored)})`;
 }
+
+/**
+ * Extra rim glow for what ECHO is doing (0 to about 0.75), added to the calibrated rim. Speaking
+ * follows the loudness of Reneė's real audio (0 to 1); thinking breathes on a 2.4 s cycle; listening
+ * holds steady. Pass t = 0 for reduced motion, which stills the breathing.
+ */
+export function liveGlow(mode: string, level: number, t: number): number {
+  if (mode === "speaking") return 0.15 + 0.6 * Math.min(1, Math.max(0, level));
+  if (mode === "thinking") return 0.12 + 0.12 * (0.5 + 0.5 * Math.sin((2 * Math.PI * t) / 2.4));
+  if (mode === "listening") return 0.12;
+  return 0;
+}
