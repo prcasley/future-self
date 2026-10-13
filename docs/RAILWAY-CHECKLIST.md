@@ -6,7 +6,7 @@ the reviewed branch; Codex does not push. Keep the current Nebius key as Prat di
 
 ## Before deploying
 
-- [ ] Review the local container verification and the issues in `voice/REAL-MIC-TEST.md`.
+- [ ] Review the local container verification and the acceptance checks in `voice/REAL-MIC-TEST.md`.
   Complete the real microphone/speaker acceptance test before recording demo claims.
 - [ ] Have Claude push the reviewed main commit. Note the exact commit to deploy.
 - [ ] Sign in to Railway yourself and select the intended personal/workspace account.

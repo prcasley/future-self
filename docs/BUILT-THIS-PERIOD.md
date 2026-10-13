@@ -115,3 +115,11 @@ Fixes from ChatGPT's source review of the conversation loop on the PC:
 - Authenticated voice synthesis returned a real 234,044-byte, 24 kHz WAV: 4.875 seconds of speech in 2.681 seconds on two CPU threads. No Nebius or Tavily keys were configured, and no paid model calls were made.
 - Evidence and limits: `docs/voice/container-verification.json`, `docs/voice/renee-container-sample.wav`, and `docs/voice/DOCKER-CHECK.md`. Total Docker build wall time was not instrumented; the export stage took 91.4 seconds.
 - These results cover 0f52d35. Claude advanced the checkout to 911d655 while verification was being documented; that newer code is not in this image. Physical microphone/speaker acceptance remains pending.
+
+## 2026-10-13 — Current main verified and release preparation consolidated
+
+- Checked GitHub and the PC: both at 034cc88, incorporating Claude's 911d655 voice fixes and committed QA/deploy checklists.
+- Verified 66 web tests, production build (Vite 1.98 s), and 151 backend tests in the offline Linux container (4.79 s).
+- Built current bundled CPU image in 8.056 s with cached layers; 837,721,309 bytes. Seven HTTP gate checks passed; real 4.875 s speech synthesized in 2.215 s on two CPU threads.
+- Refreshed safe evidence/audio, corrected stale deployment verification claims and consolidated remaining work in docs/REMAINING-WORK.md. No voice-loop rewrite.
+- Physical acceptance remains 0/30 turns at Prat's request; no paid calls, sign-in, deployment, push or deletion. Account setup, hosted verification and the real demo still require Prat/Claude.
