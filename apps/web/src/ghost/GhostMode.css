@@ -50,14 +50,16 @@
   position: absolute;
   transform-origin: center;
 }
+/* The radial fade shapes the head; the vertical fade dissolves the chest into black, so the
+   reflection has no hard bottom edge and the head floats. */
 .ghost-feather {
   width: 100%;
   height: 100%;
-  mask-image: radial-gradient(
-    ellipse 50% 50% at 50% 45%,
-    #000 var(--ghost-feather, 62%),
-    transparent 100%
-  );
+  mask-image:
+    radial-gradient(ellipse 50% 50% at 50% 45%, #000 var(--ghost-feather, 62%), transparent 100%),
+    linear-gradient(to bottom, #000 70%, transparent 95%);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
 }
 .ghost-copy canvas {
   display: block;
@@ -66,9 +68,13 @@
   object-fit: contain;
   filter: brightness(var(--ghost-brightness, 1.28))
     contrast(var(--ghost-contrast, 1.16))
-    drop-shadow(0 0 5px rgb(169 216 237 / var(--ghost-rim, 0.53)))
-    drop-shadow(0 0 12px rgb(169 216 237 / calc(var(--ghost-rim, 0.53) * 0.4)));
+    drop-shadow(0 0 5px rgb(169 216 237 / calc(var(--ghost-rim, 0.53) + var(--ghost-live, 0))))
+    drop-shadow(
+      0 0 calc(12px + 18px * var(--ghost-live, 0))
+        rgb(169 216 237 / calc(var(--ghost-rim, 0.53) * 0.4 + var(--ghost-live, 0) * 0.6))
+    );
 }
+/* Controls: Shadow Monarch — matte black, white text, purple only on edges and accents. */
 .ghost-controls {
   position: absolute;
   z-index: 2;
@@ -78,20 +84,25 @@
   max-height: calc(100% - 32px);
   overflow: auto;
   padding: 18px;
-  border: 1px solid #555;
+  border: 1px solid #2b2440;
+  border-top: 2px solid #8c5cff;
   border-radius: 12px;
-  background: #101014f5;
+  background: linear-gradient(180deg, rgb(140 92 255 / 0.08), transparent 120px), #07060bf2;
+  box-shadow: 0 0 0 1px rgb(140 92 255 / 0.1), 0 0 36px rgb(140 92 255 / 0.18);
   box-sizing: border-box;
   text-align: left;
+  color: #fff;
+  accent-color: #8c5cff;
 }
 .ghost-controls h1 {
   font-size: 20px;
+  letter-spacing: 0.02em;
   margin: 0 0 8px;
-  color: white;
+  color: #fff;
 }
 .ghost-controls p {
   font-size: 13px;
-  color: #ccc;
+  color: #d6d3e0;
   margin: 8px 0;
 }
 .ghost-controls label {
@@ -109,19 +120,66 @@
   width: 18px;
   height: 18px;
 }
-.ghost-controls input[type="file"] {
-  max-width: 100%;
-  color: white;
-}
 .ghost-controls button,
-.ghost-controls select {
-  background: #22242b;
-  color: white;
+.ghost-controls select,
+.ghost-file {
+  background: #121019;
+  color: #fff;
   padding: 9px 12px;
-  border: 1px solid #656875;
+  border: 1px solid #3a3150;
   border-radius: 6px;
   font: inherit;
+  font-size: 14px;
   cursor: pointer;
+}
+.ghost-controls button:hover:not(:disabled),
+.ghost-controls select:hover,
+.ghost-file:hover {
+  border-color: #8c5cff;
+}
+.ghost-controls .ghost-primary {
+  border: 0;
+  background: linear-gradient(135deg, #5b33d6, #8c5cff);
+  box-shadow: 0 0 18px rgb(140 92 255 / 0.45);
+  font-weight: 600;
+}
+.ghost-photo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+/* The photo picker looks like a button; the real file input stays focusable for keyboards. */
+.ghost-controls .ghost-file {
+  display: inline-flex;
+  margin: 0;
+  position: relative;
+}
+.ghost-file input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  cursor: pointer;
+}
+.ghost-file:focus-within {
+  outline: 2px solid #b79cff;
+  outline-offset: 3px;
+}
+.ghost-calibrate {
+  margin: 12px 0;
+  padding: 2px 12px;
+  border: 1px solid #2b2440;
+  border-radius: 8px;
+}
+.ghost-calibrate summary {
+  padding: 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ghost-calibrate summary::marker {
+  color: #8c5cff;
 }
 .ghost-actions {
   display: flex;
@@ -129,12 +187,15 @@
   gap: 8px;
   margin-top: 12px;
 }
+.ghost-secondary {
+  margin-top: 8px;
+}
 .ghost-controls button:disabled {
   opacity: 0.45;
   cursor: default;
 }
 .ghost-controls :focus-visible {
-  outline: 2px solid #a9d8ed;
+  outline: 2px solid #b79cff;
   outline-offset: 3px;
 }
 /* Projecting: a dim corner chip keeps the mic's state and its off switch reachable. */

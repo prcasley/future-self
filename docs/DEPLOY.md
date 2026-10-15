@@ -76,16 +76,16 @@ Speech recognition uses the browser's engine (Chrome or Edge); Firefox and Safar
 
 ## Verified here
 
-The Docker Hub pull is blocked in this build environment, so the image itself was not built here. Each stage was reproduced in a clean directory instead: `npm ci` and `npm run build` from the lockfile, a fresh Python 3.13 environment from `requirements.txt`, and the image's exact start command. Against that server:
+October 13: built application commit `034cc88` with Python 3.12 and bundled CPU
+Kokoro. All 151 backend tests passed in the Linux image; all 66 web tests and the
+production build passed. Seven real HTTP gate checks passed. Authenticated speech
+synthesis returned a 4.875-second WAV in 2.215 seconds on two CPU threads.
+See `voice/container-verification.json` and `voice/DOCKER-CHECK.md` for evidence.
 
-- A browser without credentials got 401.
-- With credentials, the page loaded, the face engine files (11) came from the same origin as `application/wasm` and `application/octet-stream`, and a voice turn streamed through the gate.
-- A photo ran the scan, “Export my data” downloaded the JSON, and “Delete all my data” plus “yes” emptied the server state and removed the photo from IndexedDB.
-- The only third-party request was the existing Google Fonts stylesheet.
-
-The first real deploy should repeat the checklist above.
-
-Oct 11: with Reneė bundled, the backend suite passes on Python 3.12, Reneė's dependencies resolve on 3.12, and `tests/test_hosted_start.py` runs the real entrypoint to check she starts on loopback with a fresh key and the app is pointed at her. The full image (CPU torch from download.pytorch.org) still needs one real `docker build` on a machine with Docker running.
+The local verification container is at http://127.0.0.1:8091. It has no Nebius or
+Tavily credentials and cannot establish a live-model demo. Physical mic/speaker
+acceptance and Railway deployment remain pending. Complete `REMAINING-WORK.md`
+and repeat the judge checklist on the hosted URL before claiming release readiness.
 
 ## Not covered
 

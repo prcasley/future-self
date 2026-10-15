@@ -730,6 +730,7 @@ function App() {
         onControlsChange={() => typedToggle(false)}
         speechLevel={speechLevel}
         mode={presenceMode}
+        accent={activeSide}
         running={running}
         onSession={start}
         onInterrupt={interrupt}

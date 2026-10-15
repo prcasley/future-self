@@ -1,3 +1,28 @@
+# Latest local hosted verification — October 13, 2026
+
+Application commit **034cc88**, including Claude's **911d655** fixes. Image
+`the-other-side:local-034cc88`: **837,721,309 bytes**; cached-layer build **8.056 s**.
+Container `echo-hosted-034cc88`: http://127.0.0.1:8091.
+
+- Web: `node --test apps/web/tests/*.test.mjs` — **66 passed**, zero failed.
+- Build: `npm run build` in apps/web — passed; Vite **1.98 s**, existing large-chunk warning.
+- Backend: `python -m pytest -q -p no:cacheprovider` inside the current Linux image,
+  network disabled and test-process caps zero — **151 passed in 4.79 s**.
+- Real HTTP checks: **7/7** passed; authenticated speech **200**, **24 kHz**,
+  **234,044 bytes**, **4.875 s** speech generated in **2.215 s**, **2 CPU threads**.
+- Docker Desktop was initially stopped; starting the installed engine resolved the
+  first build attempt's connection failure. Successful build used cached dependencies.
+- No provider keys in this container; no paid model calls. Production caps remain
+  200 model calls/day and 40 model turns/session/day. Test overrides are test-only.
+- Physical speech, speaker playback and barge-in are **not verified**: **0/30** turns.
+
+Safe current evidence: `container-verification.json`, `renee-container-sample.wav`.
+Ignored logs: `work/renee/*034cc88*`. No application code changed in this pass.
+
+The following record is historical; the current JSON/audio above supersede its sample.
+
+---
+
 # Local hosted Docker check — 2026-10-11
 
 ## Summary

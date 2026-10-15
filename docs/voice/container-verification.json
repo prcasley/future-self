@@ -1,6 +1,6 @@
 {
-  "commit": "0f52d35",
-  "image": "the-other-side:local-0f52d35",
+  "commit": "034cc88",
+  "image": "the-other-side:local-034cc88",
   "checks": [
     {
       "path": "/api/health",
@@ -49,7 +49,7 @@
       "configured": false
     },
     "voice": {
-      "name": "Reneė",
+      "name": "Rene\u0117",
       "accent": "British English",
       "engine": "kokoro"
     },
@@ -62,7 +62,7 @@
   },
   "tts": {
     "status": 200,
-    "request_seconds": 2.681,
+    "request_seconds": 2.215,
     "audio_seconds": 4.875,
     "sample_rate": 24000,
     "bytes": 234044,
@@ -73,12 +73,15 @@
     "ok": true,
     "model": "hexgrad/Kokoro-82M",
     "voice": "bf_emma",
-    "name": "Reneė",
+    "name": "Rene\u0117",
     "device": "cpu",
     "threads": 2
   },
-  "image_size_bytes": 837721829,
-  "total_build_seconds": null,
-  "timing_note": "Total build wall time was not instrumented; BuildKit export stage took 91.4 seconds.",
-  "newer_checkout_commit": "911d655 (not included in this image or these test results)"
+  "image_size_bytes": 837721309,
+  "total_build_seconds": 8.056,
+  "timing_note": "Cached-layer build; not a cold-build benchmark.",
+  "web_tests_passed": 66,
+  "backend_tests_passed": 151,
+  "backend_seconds": 4.79,
+  "physical_turns_measured": 0
 }
