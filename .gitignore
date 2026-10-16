@@ -11,3 +11,5 @@ local-data/
 # Local test photos and personal media. Never commit.
 private/
 pytest-of-*/
+# ECHO Live: 4-bit PersonaPlex weights, voices and venv (GBs). Never commit.
+work/echo-live/
