@@ -29,8 +29,15 @@ grep -qi microsoft /proc/version || echo "warning: this does not look like WSL2;
 command -v nvidia-smi >/dev/null || die "nvidia-smi not found. Install the current NVIDIA Windows driver, then reopen WSL."
 nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader \
   || die "nvidia-smi cannot see the GPU. Update the Windows NVIDIA driver and run 'wsl --shutdown'."
-free_gb=$(df -BG --output=avail "$HOME" | tail -1 | tr -dc 0-9)
-[ "$free_gb" -ge 30 ] || die "only ${free_gb} GB free in WSL; need about 30 GB (17 GB download, 5 GB output, venv)."
+free_gb() { df -BG --output=avail "$1" | tail -1 | tr -dc 0-9; }
+HF_CACHE="${HF_HOME:-$HOME/.cache/huggingface}"
+mkdir -p "$HF_CACHE"
+if [ "$(df --output=target "$HF_CACHE" | tail -1)" = "$(df --output=target "$WORK" | tail -1)" ]; then
+  [ "$(free_gb "$WORK")" -ge 30 ] || die "only $(free_gb "$WORK") GB free; need about 30 GB (17 GB download, 5 GB output, venv)."
+else
+  [ "$(free_gb "$HF_CACHE")" -ge 20 ] || die "only $(free_gb "$HF_CACHE") GB free for the Hugging Face cache ($HF_CACHE); need about 20 GB."
+  [ "$(free_gb "$WORK")" -ge 12 ] || die "only $(free_gb "$WORK") GB free under $WORK; need about 12 GB (5 GB output, venv)."
+fi
 [ -n "${HF_TOKEN:-}" ] || die "HF_TOKEN is not set. Run: export HF_TOKEN=hf_... (a read token from huggingface.co/settings/tokens)."
 
 step "2/7 System packages (asks for your WSL password once)"
@@ -82,7 +89,10 @@ step "5/7 Quantize to 4 bits (first run downloads ~17 GB; 10-20 min)"
 if [ -s "$Q4" ]; then
   echo "already done: $Q4 ($(du -h "$Q4" | cut -f1))"
 else
-  python services/echo-live/quantize_q4.py --out "$Q4"
+  # Write to a temp name and rename on success, so an interrupted run never leaves a "done" file.
+  rm -f "$Q4.partial"
+  python services/echo-live/quantize_q4.py --out "$Q4.partial"
+  mv "$Q4.partial" "$Q4"
 fi
 
 step "6/7 Real-time benchmark. Close Chrome, OBS and games now: they use VRAM."
