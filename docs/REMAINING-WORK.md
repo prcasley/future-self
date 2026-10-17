@@ -1,5 +1,7 @@
 # Remaining work — checked October 13, 2026
 
+**Update October 17:** the ordered list of what is left for Prat is now `docs/FINAL-STRETCH.md`.
+
 ## Completed preparation
 
 - [x] Checked local and remote main: both 034cc88; clean tree before this pass.
