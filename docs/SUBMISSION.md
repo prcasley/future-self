@@ -55,7 +55,7 @@ Most goal apps are checklists. What actually changes behaviour is a conversation
 
 - A complete voice loop: speak, Nemotron reasons and calls tools, state commits, Reneė answers, the ghost's lips move.
 - The Crossing's futures are reproducible simulations, labelled as scenarios, never predictions.
-- 145 backend tests, 59 web tests and the production build pass; every live claim in the README is backed by a real run.
+- 157 backend tests, 67 web tests and the production build pass; every live claim in the README is backed by a real run.
 
 ## What we learned
 

@@ -23,6 +23,9 @@ The speed on a 4060 is unknown until `bench_realtime.py` runs on it.
 
 ## Run it (Windows PC with an RTX 4060, through WSL2 Ubuntu)
 
+Shortcut: `bash scripts/echo-live-phase1.sh` does steps 0–4 below in one go and is safe to re-run.
+Checklist: [docs/voice/PHASE1-CHECKLIST.md](../../docs/voice/PHASE1-CHECKLIST.md).
+
 The server is Linux-first (it needs `libopus`), so use WSL2. Install a current NVIDIA Windows driver;
 WSL2 then sees the GPU without a separate CUDA install.
 
