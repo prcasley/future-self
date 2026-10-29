@@ -60,6 +60,8 @@ export function GhostProjection({
   const pyramid = config.layout === "pyramid";
   const speechRef = useRef(speechLevel);
   speechRef.current = speechLevel;
+  const accentRef = useRef(accent);
+  accentRef.current = accent;
   const onStateRef = useRef(onState);
   onStateRef.current = onState;
   // Pyramid: four real views (front, sides, back) of one 3D head built from the photo.
@@ -87,6 +89,7 @@ export function GhostProjection({
           () => ({
             mode: modeRef.current,
             level: speechRef.current?.current ?? null,
+            accent: accentRef.current,
           }),
         );
         if (!pyramidHead.load(image, landmarks, mask)) {

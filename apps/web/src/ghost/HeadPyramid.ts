@@ -4,6 +4,7 @@
 
 import * as THREE from "three";
 import { FACE, smoothstep } from "../living/geometry";
+import { EYE_LIGHT } from "../living/LivingPortrait";
 import { Blinker, idleHead, speechOpen, type Mode } from "../living/motion";
 import {
   buildHead,
@@ -57,10 +58,15 @@ export class HeadPyramid {
   private disposables: { dispose(): void }[] = [];
   private blinker = new Blinker(3);
   private raf = 0;
+  private eyes: THREE.Sprite[] = [];
 
   constructor(
     private targets: () => (HTMLCanvasElement | null)[],
-    private signals: () => { mode: Mode; level: number | null },
+    private signals: () => {
+      mode: Mode;
+      level: number | null;
+      accent: string | null;
+    },
   ) {
     this.renderer = new THREE.WebGLRenderer({
       antialias: true,
@@ -233,8 +239,36 @@ export class HeadPyramid {
     const mouthMesh = new THREE.Mesh(mouth, mouthMat);
     mouthMesh.position.set(head.mouth.x, head.mouth.y, head.mouth.z);
     this.rig.add(mouthMesh);
+    // The scenario's faint light inside the irises, as on the single portrait.
+    const glow = document.createElement("canvas");
+    glow.width = glow.height = 64;
+    const gctx = glow.getContext("2d");
+    if (gctx) {
+      const g = gctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+      g.addColorStop(0, "rgba(255,255,255,1)");
+      g.addColorStop(1, "rgba(255,255,255,0)");
+      gctx.fillStyle = g;
+      gctx.fillRect(0, 0, 64, 64);
+    }
+    const glowTex = new THREE.CanvasTexture(glow);
+    this.eyes = head.irises.map(([x, y, z]) => {
+      const sprite = new THREE.Sprite(
+        new THREE.SpriteMaterial({
+          map: glowTex,
+          blending: THREE.AdditiveBlending,
+          transparent: true,
+          depthWrite: false,
+        }),
+      );
+      sprite.scale.set(0.07, 0.07, 1);
+      sprite.position.set(x, y, z + 0.01);
+      this.rig.add(sprite);
+      this.disposables.push(sprite.material);
+      return sprite;
+    });
 
     this.disposables.push(
+      glowTex,
       texture,
       face,
       faceMat,
@@ -262,9 +296,18 @@ export class HeadPyramid {
   private draw(t: number) {
     const head = this.head;
     if (!head || !this.face || !this.posed) return;
-    const { mode, level } = this.signals();
+    const { mode, level, accent } = this.signals();
     const open = mode === "speaking" ? Math.min(1, level ?? speechOpen(t)) : 0;
-    poseFace(head, open, t ? this.blinker.at(t) : 0, this.posed);
+    const blink = t ? this.blinker.at(t) : 0;
+    poseFace(head, open, blink, this.posed);
+    const light = accent ? EYE_LIGHT[accent] || EYE_LIGHT.home : null;
+    for (const eye of this.eyes) {
+      eye.visible = !!light;
+      if (light) {
+        eye.material.color.setRGB(...light);
+        eye.material.opacity = 0.22 * (1 - blink);
+      }
+    }
     this.face.getAttribute("position").needsUpdate = true;
     const idle = idleHead(t, 2);
     this.rig.rotation.set(idle.pitch * 1.5, idle.yaw * 2.5, idle.roll);
@@ -298,6 +341,7 @@ export class HeadPyramid {
     for (const d of this.disposables) d.dispose();
     this.disposables = [];
     this.head = null;
+    this.eyes = [];
     this.face = null;
     this.posed = null;
   }

@@ -36,6 +36,8 @@ export type Head = {
   /** The dark inside of the mouth, revealed when the jaw drops. */
   mouth: { x: number; y: number; z: number; w: number; h: number };
   chin: number;
+  /** Iris centres (subject's right, then left), for the scenario's eye light. */
+  irises: [number, number, number][];
   /** Maps head (x, y) back to the photo: u = x0 + x * sx, v = y0 - y * sy (both 0..1). */
   photo: { x0: number; y0: number; sx: number; sy: number };
   /** Ellipsoids that make the head shape behind the face: the cranium, then the jaw. */
@@ -172,6 +174,9 @@ export function buildHead(lm: Landmark[], W: number, H: number): Head | null {
       h: 0.16,
     },
     chin: ys[FACE.chin],
+    irises: [FACE.irisRight, FACE.irisLeft].map(
+      (i) => [X(i), Y(i) - cy, Z(i) - cz] as [number, number, number],
+    ),
     photo: {
       x0: midX / W,
       y0: (midY - cy * unit) / H,
