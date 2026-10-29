@@ -46,7 +46,7 @@ export interface LivingPortraitProps {
   onFrame?: (canvas: HTMLCanvasElement) => void;
 }
 
-const EYE_LIGHT: Record<string, [number, number, number]> = {
+export const EYE_LIGHT: Record<string, [number, number, number]> = {
   home: [0.8, 0.9, 1.0],
   dream: [1.0, 0.82, 0.46],
   good: [0.55, 0.92, 1.0],

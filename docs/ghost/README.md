@@ -17,12 +17,16 @@ Repository: `prcasley/future-self`, branch `main`.
    ```
 3. Open `http://127.0.0.1:5186/ghost`. The browser's saved base photo is restored if available. Otherwise choose `docs/ghost/stand-in.jpg` or a local portrait. Photos selected inside Ghost are page-only and are not uploaded or saved.
 4. Alternatively, click **Ghost mode** on the main portrait or `/living.html`. Entering from a living portrait carries its current face and head-follow choice into Ghost. Exit Ghost to select another scenario face.
-5. Leave **Mirror reflection** on for a single acrylic reflection. Switch it off for an unmirrored view. Choose **Four-sided pyramid** for four outward-facing, synchronized copies. Adjust **Size** and **Vertical**.
+5. Leave **Mirror reflection** on for a single acrylic reflection. Switch it off for an unmirrored view. Choose **Four-sided pyramid (3D head)** for four real views of one 3D head built from the photo: the front faces the bottom edge, the right and left edges show the head's sides, and the top edge shows the back of the head. Adjust **Size** and **Vertical**.
 6. Use **Start session** for the existing voice conversation; enable **Follow my head** if wanted. Camera tracking and reflection mirroring are independent switches.
 7. Press **Project** to hide all controls, or **Fullscreen** to fill the screen and hide them. Tap anywhere or press **Esc** to restore controls. Esc may also leave browser fullscreen. **Exit Ghost** returns to the app without resetting the voice session.
 8. Lay the screen flat beneath the acrylic at 45 degrees, darken the room, and adjust alignment. Keep the screen bright. Large size/position settings can intentionally crop the portrait at the display edge.
 
 The portrait itself needs no API. Conversation uses the existing API configuration and speech permissions. A phone needs the existing HTTPS deployment for camera/microphone access; a desktop localhost address is not a phone link. `/ghost` and `/ghost/` are included in the production static build.
+
+## The 3D head (pyramid)
+
+`apps/web/src/ghost/head3d.ts` turns the photo's 468 face-mesh points, with MediaPipe's depth, into a textured face mask, and sets it into a head shape (a cranium and a jaw) that is pulled in to meet the mask's edge. Where the photo can see the head (hair above the forehead, the temples) the head wears the photo's own pixels, using the person mask; the sides and back, which one photo can't show, are a smooth head in the photo's hair, skin and jawline colours, with ears. `HeadPyramid.ts` renders the four views with one WebGL renderer each frame; the jaw follows Reneė's audio level (or the speech rhythm with the browser voice), the eyes blink, and the head moves slightly. Follow-my-head is not used in the pyramid yet.
 
 ## Implementation
 
