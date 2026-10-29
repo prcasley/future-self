@@ -297,7 +297,7 @@ export function GhostMode({
               }
             >
               <option value="single">Single portrait</option>
-              <option value="pyramid">Four-sided pyramid</option>
+              <option value="pyramid">Four-sided pyramid (3D head)</option>
             </select>
           </label>
           <details className="ghost-calibrate">
